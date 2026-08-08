@@ -104,3 +104,4 @@ def close_connection(connection: MySQLConnection | None) -> None:
     if connection and connection.is_connected():
         connection.close()
         print("[SUCCESS] Database connection closed.")
+
