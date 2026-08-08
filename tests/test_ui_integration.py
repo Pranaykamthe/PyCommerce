@@ -17,10 +17,10 @@ from utils.input_helper import (
 from utils.loading import show_loading
 from utils.menu import Menu
 from utils.messages import (
-    show_error,
-    show_info,
-    show_success,
-    show_warning,
+    error,
+    info,
+    success,
+    warning,
 )
 from utils.tables import (
     show_cart_table,
@@ -59,10 +59,10 @@ def test_ui_display_components():
 def test_message_components():
     """Test all message utilities."""
 
-    show_success("Operation completed successfully.")
-    show_error("Something went wrong.")
-    show_warning("This is a warning.")
-    show_info("This is information.")
+    success("Operation completed successfully.")
+    error("Something went wrong.")
+    warning("This is a warning.")
+    info("This is information.")
 
 
 def test_table_components():
