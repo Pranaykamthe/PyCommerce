@@ -7,6 +7,7 @@ from models.user import User
 from ui.product_ui import product_menu
 from ui.cart_ui import cart_menu
 from ui.order_ui import order_menu
+from ui.wishlist_ui import wishlist_menu
 from ui.auth_ui import logout_user
 
 from utils.console import console
@@ -84,12 +85,20 @@ def customer_menu(
         )
 
         console.print(
-            "4. Logout"
+            "4. Wishlist"
+        )
+
+        console.print(
+            "5. Logout"
         )
 
         choice = input(
             "\nEnter your choice: "
         ).strip()
+
+        # ----------------------------------------------------
+        # Browse Products
+        # ----------------------------------------------------
 
         if choice == "1":
 
@@ -97,11 +106,19 @@ def customer_menu(
                 user.user_id
             )
 
+        # ----------------------------------------------------
+        # Shopping Cart
+        # ----------------------------------------------------
+
         elif choice == "2":
 
             cart_menu(
                 user.user_id
             )
+
+        # ----------------------------------------------------
+        # My Orders
+        # ----------------------------------------------------
 
         elif choice == "3":
 
@@ -109,13 +126,31 @@ def customer_menu(
                 user.user_id
             )
 
+        # ----------------------------------------------------
+        # Wishlist
+        # ----------------------------------------------------
+
         elif choice == "4":
+
+            wishlist_menu(
+                user.user_id
+            )
+
+        # ----------------------------------------------------
+        # Logout
+        # ----------------------------------------------------
+
+        elif choice == "5":
 
             logout_user(
                 user
             )
 
             break
+
+        # ----------------------------------------------------
+        # Invalid Choice
+        # ----------------------------------------------------
 
         else:
 

@@ -1,6 +1,4 @@
 """
-schema.py
----------
 Creates all database tables required by PyCommerce.
 
 Tables:
@@ -12,11 +10,16 @@ Tables:
 6. order_items
 7. payments
 8. reviews
+9. wishlist
 """
 
 from mysql.connector import Error
 
-from config.database import create_database, get_connection, close_connection
+from config.database import (
+    create_database,
+    get_connection,
+    close_connection
+)
 
 
 # ============================================================
@@ -259,6 +262,38 @@ CREATE TABLE IF NOT EXISTS reviews (
 
 
 # ============================================================
+# WISHLIST TABLE
+# ============================================================
+
+CREATE_WISHLIST_TABLE = """
+CREATE TABLE IF NOT EXISTS wishlist (
+    wishlist_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    product_id INT NOT NULL,
+    added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_wishlist_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_wishlist_product
+        FOREIGN KEY (product_id)
+        REFERENCES products(product_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT uq_wishlist_user_product
+        UNIQUE (user_id, product_id),
+
+    INDEX idx_wishlist_user (user_id),
+    INDEX idx_wishlist_product (product_id)
+);
+"""
+
+
+# ============================================================
 # TABLE CREATION ORDER
 # ============================================================
 
@@ -271,6 +306,7 @@ TABLES = [
     ("order_items", CREATE_ORDER_ITEMS_TABLE),
     ("payments", CREATE_PAYMENTS_TABLE),
     ("reviews", CREATE_REVIEWS_TABLE),
+    ("wishlist", CREATE_WISHLIST_TABLE),
 ]
 
 
@@ -305,6 +341,7 @@ def create_tables() -> bool:
         connection.commit()
 
         print("[SUCCESS] All PyCommerce tables are ready.")
+
         return True
 
     except Error as e:
