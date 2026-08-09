@@ -176,6 +176,29 @@ class ProductService:
         return ProductRepository.get_all()
 
     # ========================================================
+    # Get Products By Category
+    # ========================================================
+
+    @staticmethod
+    def get_products_by_category(
+        category_id: int
+    ) -> list[Product]:
+        """
+        Get all products belonging to a category.
+
+        Raises:
+            ValueError: If category ID is invalid.
+        """
+
+        if category_id <= 0:
+            raise ValueError(
+                "Category ID must be greater than zero."
+            )
+
+        return ProductRepository.get_by_category(
+            category_id
+        )
+    # ========================================================
     # Search Products
     # ========================================================
 

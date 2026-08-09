@@ -5,6 +5,8 @@ Product-related user interface for PyCommerce.
 from typing import Optional
 
 from models.product import Product
+
+from services.category_service import CategoryService
 from services.product_service import ProductService
 from services.cart_service import CartService
 
@@ -53,16 +55,148 @@ def display_products(
 # ============================================================
 
 def browse_products() -> None:
-    """Display all available products."""
+    """Browse all products or browse products by category."""
+
+    while True:
+
+        console.print(
+            "\n[bold cyan]=== Browse Products ===[/bold cyan]"
+        )
+
+        console.print(
+            "1. All Products"
+        )
+
+        console.print(
+            "2. Browse by Category"
+        )
+
+        console.print(
+            "0. Back"
+        )
+
+        choice = input(
+            "\nEnter your choice: "
+        ).strip()
+
+        if choice == "1":
+
+            try:
+
+                products = ProductService.get_all_products()
+
+                display_products(products)
+
+            except Exception as exc:
+
+                error(
+                    f"Unable to load products: {exc}"
+                )
+
+        elif choice == "2":
+
+            browse_products_by_category()
+
+        elif choice == "0":
+
+            break
+
+        else:
+
+            error(
+                "Invalid choice."
+            )
+
+
+# ============================================================
+# Browse Products By Category
+# ============================================================
+
+def browse_products_by_category() -> None:
+    """Display categories and browse products by category."""
 
     try:
-        products = ProductService.get_all_products()
 
-        display_products(products)
+        categories = CategoryService.get_all_categories()
+
+        if not categories:
+
+            console.print(
+                "[yellow]No categories available.[/yellow]"
+            )
+
+            return
+
+        while True:
+
+            console.print(
+                "\n[bold cyan]=== Categories ===[/bold cyan]\n"
+            )
+
+            for index, category in enumerate(
+                categories,
+                start=1
+            ):
+
+                console.print(
+                    f"{index}. {category.name}"
+                )
+
+            console.print(
+                "0. Back"
+            )
+
+            choice = input(
+                "\nEnter your choice: "
+            ).strip()
+
+            if choice == "0":
+
+                break
+
+            try:
+
+                category_index = int(choice)
+
+            except ValueError:
+
+                error(
+                    "Category choice must be a number."
+                )
+
+                continue
+
+            if (
+                category_index < 1
+                or category_index > len(categories)
+            ):
+
+                error(
+                    "Invalid category choice."
+                )
+
+                continue
+
+            selected_category = categories[
+                category_index - 1
+            ]
+
+            products = ProductService.get_products_by_category(
+                selected_category.category_id
+            )
+
+            console.print(
+                f"\n[bold cyan]=== "
+                f"{selected_category.name} Products "
+                f"===[/bold cyan]"
+            )
+
+            display_products(products)
 
     except Exception as exc:
+
         error(
-            f"Unable to load products: {exc}"
+            f"Unable to load categories: {exc}"
         )
 
 
@@ -76,14 +210,17 @@ def show_product_details(
     """Display details for a specific product."""
 
     try:
+
         product = ProductService.get_product(
             product_id
         )
 
         if product is None:
+
             error(
                 "Product not found."
             )
+
             return None
 
         console.print(
@@ -123,13 +260,17 @@ def show_product_details(
         return product
 
     except ValueError as exc:
+
         error(str(exc))
+
         return None
 
     except Exception as exc:
+
         error(
             f"Unable to load product: {exc}"
         )
+
         return None
 
 
@@ -149,12 +290,15 @@ def search_products() -> None:
     ).strip()
 
     if not search_term:
+
         error(
             "Search term cannot be empty."
         )
+
         return
 
     try:
+
         products = ProductService.search_products(
             search_term
         )
@@ -162,6 +306,7 @@ def search_products() -> None:
         display_products(products)
 
     except Exception as exc:
+
         error(
             f"Search failed: {exc}"
         )
@@ -181,6 +326,7 @@ def add_product_to_cart(
     )
 
     try:
+
         product_id = int(
             input(
                 "Enter product ID: "
@@ -192,9 +338,11 @@ def add_product_to_cart(
         )
 
         if product is None:
+
             error(
                 "Product not found."
             )
+
             return False
 
         console.print(
@@ -225,9 +373,11 @@ def add_product_to_cart(
         )
 
         if result:
+
             success(
                 "Product added to cart successfully."
             )
+
             return True
 
         error(
@@ -237,13 +387,17 @@ def add_product_to_cart(
         return False
 
     except ValueError as exc:
+
         error(str(exc))
+
         return False
 
     except Exception as exc:
+
         error(
             f"Unable to add product to cart: {exc}"
         )
+
         return False
 
 
@@ -301,6 +455,7 @@ def product_menu(
             ).strip()
 
             try:
+
                 product_id = int(
                     product_id_text
                 )
@@ -310,6 +465,7 @@ def product_menu(
                 )
 
             except ValueError:
+
                 error(
                     "Product ID must be a number."
                 )
@@ -352,6 +508,7 @@ def create_product_ui() -> Optional[Product]:
     )
 
     try:
+
         category_id = int(
             input(
                 "Category ID: "
@@ -414,6 +571,7 @@ def create_product_ui() -> Optional[Product]:
     except ValueError as exc:
 
         error(str(exc))
+
         return None
 
     except Exception as exc:
@@ -437,6 +595,7 @@ def update_product_ui() -> bool:
     )
 
     try:
+
         product_id = int(
             input(
                 "Product ID: "
@@ -483,14 +642,17 @@ def update_product_ui() -> bool:
         ).strip()
 
         if name:
+
             product.name = name
 
         if price_text:
+
             product.price = float(
                 price_text
             )
 
         if stock_text:
+
             product.stock = int(
                 stock_text
             )
@@ -516,6 +678,7 @@ def update_product_ui() -> bool:
     except ValueError as exc:
 
         error(str(exc))
+
         return False
 
     except Exception as exc:
@@ -539,6 +702,7 @@ def delete_product_ui() -> bool:
     )
 
     try:
+
         product_id = int(
             input(
                 "Product ID: "
@@ -594,6 +758,7 @@ def delete_product_ui() -> bool:
     except ValueError as exc:
 
         error(str(exc))
+
         return False
 
     except Exception as exc:

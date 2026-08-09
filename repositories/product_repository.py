@@ -199,6 +199,78 @@ class ProductRepository:
             cursor.close()
             close_connection(connection)
 
+
+    # ========================================================
+    # Get Products By Category
+    # ========================================================
+
+    @staticmethod
+    def get_by_category(
+        category_id: int
+    ) -> list[Product]:
+        """Return all products belonging to a category."""
+
+        if category_id <= 0:
+            return []
+
+        connection = get_connection()
+
+        if connection is None:
+            return []
+
+        cursor = connection.cursor(
+            dictionary=True
+        )
+
+        try:
+
+            query = """
+                SELECT
+                    product_id,
+                    category_id,
+                    product_name,
+                    description,
+                    price,
+                    stock_quantity,
+                    image_path,
+                    created_at,
+                    updated_at
+                FROM products
+                WHERE category_id = %s
+                ORDER BY product_id
+            """
+
+            cursor.execute(
+                query,
+                (category_id,)
+            )
+
+            rows = cursor.fetchall()
+
+            products = []
+
+            for row in rows:
+
+                product = Product(
+                    product_id=row["product_id"],
+                    category_id=row["category_id"],
+                    name=row["product_name"],
+                    description=row["description"] or "",
+                    price=float(row["price"]),
+                    stock=row["stock_quantity"],
+                    image_url=row["image_path"] or "",
+                    created_at=str(row["created_at"]),
+                    updated_at=str(row["updated_at"])
+                )
+
+                products.append(product)
+
+            return products
+
+        finally:
+
+            cursor.close()
+            close_connection(connection)
     # ========================================================
     # Search Products By Name
     # ========================================================
