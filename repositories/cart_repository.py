@@ -88,6 +88,7 @@ class CartRepository:
                     c.cart_id,
                     c.user_id,
                     c.product_id,
+                    p.product_name,
                     c.quantity,
                     p.price
                 FROM cart c
@@ -110,6 +111,7 @@ class CartRepository:
                 cart_id=row["cart_id"],
                 user_id=row["user_id"],
                 product_id=row["product_id"],
+                product_name=row["product_name"],
                 quantity=row["quantity"],
                 price=float(row["price"])
             )
@@ -144,6 +146,7 @@ class CartRepository:
                     c.cart_id,
                     c.user_id,
                     c.product_id,
+                    p.product_name,
                     c.quantity,
                     p.price
                 FROM cart c
@@ -170,6 +173,7 @@ class CartRepository:
                 cart_id=row["cart_id"],
                 user_id=row["user_id"],
                 product_id=row["product_id"],
+                product_name=row["product_name"],
                 quantity=row["quantity"],
                 price=float(row["price"])
             )
@@ -203,6 +207,7 @@ class CartRepository:
                     c.cart_id,
                     c.user_id,
                     c.product_id,
+                    p.product_name,
                     c.quantity,
                     p.price
                 FROM cart c
@@ -226,6 +231,7 @@ class CartRepository:
                     cart_id=row["cart_id"],
                     user_id=row["user_id"],
                     product_id=row["product_id"],
+                    product_name=row["product_name"],
                     quantity=row["quantity"],
                     price=float(row["price"])
                 )

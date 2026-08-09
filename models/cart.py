@@ -1,7 +1,3 @@
-"""
-Defines the Cart model for the PyCommerce project.
-"""
-
 from dataclasses import dataclass
 from typing import Optional
 
@@ -15,6 +11,7 @@ class Cart:
     cart_id: Optional[int] = None
     user_id: Optional[int] = None
     product_id: Optional[int] = None
+    product_name: str = ""
     quantity: int = 1
     price: float = 0.0
     added_at: Optional[str] = None
@@ -28,6 +25,7 @@ class Cart:
             f"id={self.cart_id}, "
             f"user_id={self.user_id}, "
             f"product_id={self.product_id}, "
+            f"product_name={self.product_name}, "
             f"quantity={self.quantity}, "
             f"price={self.price}"
             f")"

@@ -33,14 +33,15 @@ def display_cart(
     console.print(
         "[bold]"
         f"{'Product ID':<15}"
-        f"{'Quantity':<15}"
+        f"{'Product Name':<20}"
+        f"{'Quantity':<12}"
         f"{'Unit Price':<15}"
         f"{'Subtotal':<15}"
         "[/bold]"
     )
 
     console.print(
-        "-" * 65
+        "-" * 77
     )
 
     total = 0.0
@@ -48,6 +49,7 @@ def display_cart(
     for item in items:
 
         product_id = item.product_id
+        product_name = item.product_name
         quantity = item.quantity
         price = float(item.price)
 
@@ -57,13 +59,14 @@ def display_cart(
 
         console.print(
             f"{str(product_id):<15}"
-            f"{str(quantity):<15}"
+            f"{product_name:<20}"
+            f"{str(quantity):<12}"
             f"₹{price:<14.2f}"
             f"₹{subtotal:<14.2f}"
         )
 
     console.print(
-        "-" * 65
+        "-" * 77
     )
 
     console.print(
@@ -288,7 +291,7 @@ def remove_from_cart(
     except Exception as exc:
 
         error(
-            f"Unable to remove product: {exc}"
+            f"Unable to remove product from cart: {exc}"
         )
 
         return False

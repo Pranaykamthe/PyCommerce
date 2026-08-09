@@ -4,7 +4,11 @@ Database operations for products.
 
 from typing import Optional
 
-from config.database import get_connection, close_connection
+from config.database import (
+    get_connection,
+    close_connection
+)
+
 from models.product import Product
 
 
@@ -29,6 +33,7 @@ class ProductRepository:
         cursor = connection.cursor()
 
         try:
+
             query = """
                 INSERT INTO products (
                     category_id,
@@ -62,6 +67,7 @@ class ProductRepository:
             return product
 
         finally:
+
             cursor.close()
             close_connection(connection)
 
@@ -85,6 +91,7 @@ class ProductRepository:
         )
 
         try:
+
             query = """
                 SELECT
                     product_id,
@@ -123,6 +130,7 @@ class ProductRepository:
             )
 
         finally:
+
             cursor.close()
             close_connection(connection)
 
@@ -144,6 +152,7 @@ class ProductRepository:
         )
 
         try:
+
             query = """
                 SELECT
                     product_id,
@@ -159,13 +168,16 @@ class ProductRepository:
                 ORDER BY product_id
             """
 
-            cursor.execute(query)
+            cursor.execute(
+                query
+            )
 
             rows = cursor.fetchall()
 
             products = []
 
             for row in rows:
+
                 product = Product(
                     product_id=row["product_id"],
                     category_id=row["category_id"],
@@ -183,6 +195,7 @@ class ProductRepository:
             return products
 
         finally:
+
             cursor.close()
             close_connection(connection)
 
@@ -197,9 +210,7 @@ class ProductRepository:
         """
         Search products by product name.
 
-        Uses a partial match so that searching for
-        'phone' can return products such as
-        'Smartphone' or 'Phone Case'.
+        Uses a partial match.
         """
 
         connection = get_connection()
@@ -212,6 +223,7 @@ class ProductRepository:
         )
 
         try:
+
             query = """
                 SELECT
                     product_id,
@@ -242,6 +254,7 @@ class ProductRepository:
             products = []
 
             for row in rows:
+
                 product = Product(
                     product_id=row["product_id"],
                     category_id=row["category_id"],
@@ -259,6 +272,7 @@ class ProductRepository:
             return products
 
         finally:
+
             cursor.close()
             close_connection(connection)
 
@@ -283,6 +297,7 @@ class ProductRepository:
         cursor = connection.cursor()
 
         try:
+
             query = """
                 UPDATE products
                 SET
@@ -315,6 +330,69 @@ class ProductRepository:
             return cursor.rowcount > 0
 
         finally:
+
+            cursor.close()
+            close_connection(connection)
+
+    # ========================================================
+    # Decrease Stock
+    # ========================================================
+
+    @staticmethod
+    def decrease_stock(
+        product_id: int,
+        quantity: int
+    ) -> bool:
+        """
+        Decrease product stock after a successful order.
+
+        The update only happens when enough stock is available.
+
+        Example:
+            Current stock = 10
+            Quantity sold = 2
+            New stock = 8
+        """
+
+        if product_id <= 0:
+            return False
+
+        if quantity <= 0:
+            return False
+
+        connection = get_connection()
+
+        if connection is None:
+            return False
+
+        cursor = connection.cursor()
+
+        try:
+
+            query = """
+                UPDATE products
+                SET stock_quantity = stock_quantity - %s
+                WHERE product_id = %s
+                  AND stock_quantity >= %s
+            """
+
+            values = (
+                quantity,
+                product_id,
+                quantity
+            )
+
+            cursor.execute(
+                query,
+                values
+            )
+
+            connection.commit()
+
+            return cursor.rowcount > 0
+
+        finally:
+
             cursor.close()
             close_connection(connection)
 
@@ -328,6 +406,9 @@ class ProductRepository:
     ) -> bool:
         """Delete a product by its ID."""
 
+        if product_id <= 0:
+            return False
+
         connection = get_connection()
 
         if connection is None:
@@ -336,6 +417,7 @@ class ProductRepository:
         cursor = connection.cursor()
 
         try:
+
             query = """
                 DELETE FROM products
                 WHERE product_id = %s
@@ -351,5 +433,6 @@ class ProductRepository:
             return cursor.rowcount > 0
 
         finally:
+
             cursor.close()
             close_connection(connection)
