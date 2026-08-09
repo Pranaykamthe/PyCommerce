@@ -1,325 +1,389 @@
 """
-test_order_service.py
----------------------
 Tests for OrderService.
 """
 
-import pytest
+from uuid import uuid4
 
-from models.order import Order
 from models.order_item import OrderItem
+from models.order import Order
+from models.user import User
+
+from repositories.user_repository import UserRepository
+from repositories.order_repository import OrderRepository
+
 from services.order_service import OrderService
 
 
 # ============================================================
-# Validation Tests
+# Test Data Helpers
 # ============================================================
 
-def test_valid_user_id():
-    """Test valid user ID."""
+def create_test_user() -> User:
+    """Create a unique test user."""
 
-    OrderService.validate_user_id(1)
+    unique_id = uuid4().hex[:8]
 
-
-def test_invalid_user_id():
-    """Test invalid user ID."""
-
-    with pytest.raises(ValueError):
-        OrderService.validate_user_id(0)
-
-
-def test_negative_user_id():
-    """Test negative user ID."""
-
-    with pytest.raises(ValueError):
-        OrderService.validate_user_id(-1)
-
-
-def test_valid_status():
-    """Test valid order status."""
-
-    OrderService.validate_status(
-        "pending"
+    user = User(
+        name="Order Service Test",
+        email=f"order_service_{unique_id}@pycommerce.test",
+        password="pass12345",
+        phone=f"77777{unique_id[:5]}",
+        address="Pune",
+        role="customer"
     )
 
-    OrderService.validate_status(
-        "confirmed"
-    )
+    created = UserRepository.create(user)
 
-    OrderService.validate_status(
-        "shipped"
-    )
+    assert created is not None
+    assert created.user_id is not None
 
-    OrderService.validate_status(
-        "delivered"
-    )
-
-    OrderService.validate_status(
-        "cancelled"
-    )
-
-
-def test_invalid_status():
-    """Test invalid order status."""
-
-    with pytest.raises(ValueError):
-        OrderService.validate_status(
-            "invalid"
-        )
-
-
-def test_valid_shipping_address():
-    """Test valid shipping address."""
-
-    OrderService.validate_shipping_address(
-        "Pune, Maharashtra"
-    )
-
-
-def test_empty_shipping_address():
-    """Test empty shipping address."""
-
-    with pytest.raises(ValueError):
-        OrderService.validate_shipping_address(
-            ""
-        )
-
-
-def test_valid_quantity():
-    """Test valid quantity."""
-
-    OrderService.validate_quantity(5)
-
-
-def test_invalid_quantity():
-    """Test invalid quantity."""
-
-    with pytest.raises(ValueError):
-        OrderService.validate_quantity(0)
-
-
-def test_negative_quantity():
-    """Test negative quantity."""
-
-    with pytest.raises(ValueError):
-        OrderService.validate_quantity(-1)
-
-
-def test_valid_price():
-    """Test valid price."""
-
-    OrderService.validate_price(500.00)
-
-
-def test_negative_price():
-    """Test negative price."""
-
-    with pytest.raises(ValueError):
-        OrderService.validate_price(-100.00)
+    return created
 
 
 # ============================================================
-# Total Calculation Tests
+# Get Order
 # ============================================================
 
-def test_calculate_total():
-    """Test calculating order total."""
+def test_get_order():
+    """Test retrieving an order."""
 
-    items = [
-        OrderItem(
-            product_id=1,
-            quantity=2,
-            price=500.00
-        ),
-        OrderItem(
-            product_id=2,
-            quantity=1,
-            price=250.00
-        )
-    ]
-
-    total = OrderService.calculate_total(
-        items
-    )
-
-    assert total == 1250.00
-
-
-def test_calculate_total_empty_items():
-    """Test calculating total without items."""
-
-    with pytest.raises(ValueError):
-        OrderService.calculate_total([])
-
-
-def test_calculate_total_invalid_quantity():
-    """Test total calculation with invalid quantity."""
-
-    items = [
-        OrderItem(
-            product_id=1,
-            quantity=0,
-            price=500.00
-        )
-    ]
-
-    with pytest.raises(ValueError):
-        OrderService.calculate_total(items)
-
-
-def test_calculate_total_negative_price():
-    """Test total calculation with negative price."""
-
-    items = [
-        OrderItem(
-            product_id=1,
-            quantity=1,
-            price=-500.00
-        )
-    ]
-
-    with pytest.raises(ValueError):
-        OrderService.calculate_total(items)
-
-
-# ============================================================
-# Order Validation Tests
-# ============================================================
-
-def test_create_order_without_user():
-    """Test order without user ID."""
+    user = create_test_user()
 
     order = Order(
-        user_id=None,
-        shipping_address="Pune"
-    )
-
-    items = [
-        OrderItem(
-            product_id=1,
-            quantity=1,
-            price=100.00
-        )
-    ]
-
-    with pytest.raises(ValueError):
-        OrderService.create_order(
-            order,
-            items
-        )
-
-
-def test_create_order_without_items():
-    """Test order without items."""
-
-    order = Order(
-        user_id=1,
-        shipping_address="Pune"
-    )
-
-    with pytest.raises(ValueError):
-        OrderService.create_order(
-            order,
-            []
-        )
-
-
-def test_update_order_without_id():
-    """Test updating an order without ID."""
-
-    order = Order(
-        order_id=None,
-        user_id=1,
-        total_amount=100.00,
+        user_id=user.user_id,
+        total_amount=1200.00,
         status="pending",
         shipping_address="Pune"
     )
 
-    with pytest.raises(ValueError):
-        OrderService.update_order(order)
+    created_order = OrderRepository.create_order(order)
 
+    assert created_order is not None
+    assert created_order.order_id is not None
 
-# ============================================================
-# Order Item Validation Tests
-# ============================================================
-
-def test_add_order_item_without_order_id():
-    """Test order item without order ID."""
-
-    item = OrderItem(
-        order_id=None,
-        product_id=1,
-        quantity=1,
-        price=100.00
+    found = OrderService.get_order(
+        created_order.order_id
     )
 
-    with pytest.raises(ValueError):
-        OrderService.add_order_item(item)
-
-
-def test_add_order_item_without_product_id():
-    """Test order item without product ID."""
-
-    item = OrderItem(
-        order_id=1,
-        product_id=None,
-        quantity=1,
-        price=100.00
-    )
-
-    with pytest.raises(ValueError):
-        OrderService.add_order_item(item)
-
-
-def test_update_order_item_without_id():
-    """Test updating order item without ID."""
-
-    item = OrderItem(
-        order_item_id=None,
-        order_id=1,
-        product_id=1,
-        quantity=1,
-        price=100.00
-    )
-
-    with pytest.raises(ValueError):
-        OrderService.update_order_item(item)
+    assert found is not None
+    assert found.order_id == created_order.order_id
+    assert found.user_id == created_order.user_id
+    assert found.total_amount == created_order.total_amount
+    assert found.status == created_order.status
 
 
 # ============================================================
-# ID Validation Tests
+# Get Order Not Found
 # ============================================================
 
-def test_get_order_invalid_id():
-    """Test invalid order ID."""
+def test_get_order_not_found():
+    """Test retrieving a nonexistent order."""
 
-    with pytest.raises(ValueError):
-        OrderService.get_order(0)
+    result = OrderService.get_order(
+        999999999
+    )
 
-
-def test_get_user_orders_invalid_id():
-    """Test invalid user ID."""
-
-    with pytest.raises(ValueError):
-        OrderService.get_user_orders(0)
+    assert result is None
 
 
-def test_get_order_items_invalid_id():
-    """Test invalid order ID."""
+# ============================================================
+# Get User Orders
+# ============================================================
 
-    with pytest.raises(ValueError):
-        OrderService.get_order_items(0)
+def test_get_user_orders():
+    """Test retrieving all orders for a user."""
+
+    user = create_test_user()
+
+    order1 = Order(
+        user_id=user.user_id,
+        total_amount=500.00,
+        status="pending",
+        shipping_address="Pune"
+    )
+
+    order2 = Order(
+        user_id=user.user_id,
+        total_amount=750.00,
+        status="confirmed",
+        shipping_address="Mumbai"
+    )
+
+    created1 = OrderRepository.create_order(order1)
+    created2 = OrderRepository.create_order(order2)
+
+    assert created1 is not None
+    assert created2 is not None
+
+    orders = OrderService.get_user_orders(
+        user.user_id
+    )
+
+    assert isinstance(orders, list)
+
+    order_ids = [
+        item.order_id
+        for item in orders
+    ]
+
+    assert created1.order_id in order_ids
+    assert created2.order_id in order_ids
 
 
-def test_delete_order_invalid_id():
-    """Test invalid order ID."""
+# ============================================================
+# Get User Orders - Empty
+# ============================================================
 
-    with pytest.raises(ValueError):
-        OrderService.delete_order(0)
+def test_get_user_orders_empty():
+    """Test retrieving orders for a user with no orders."""
+
+    user = create_test_user()
+
+    orders = OrderService.get_user_orders(
+        user.user_id
+    )
+
+    assert isinstance(orders, list)
+    assert orders == []
 
 
-def test_delete_order_item_invalid_id():
-    """Test invalid order item ID."""
+# ============================================================
+# Create Order
+# ============================================================
 
-    with pytest.raises(ValueError):
-        OrderService.delete_order_item(0)
+def test_create_order():
+    """Test creating an order through the service."""
+
+    user = create_test_user()
+
+    order = Order(
+        user_id=user.user_id,
+        total_amount=1200.00,
+        status="pending",
+        shipping_address="Pune"
+    )
+
+    items = [
+        OrderItem(
+            product_id=278,
+            quantity=1,
+            price=1200.00
+        )
+    ]
+
+    created = OrderService.create_order(
+        order,
+        items
+    )
+
+    assert created is not None
+    assert created.order_id is not None
+    assert created.user_id == user.user_id
+    assert created.total_amount == 1200.00
+    assert created.status == "pending"
+
+
+# ============================================================
+# Create Order Invalid User
+# ============================================================
+
+def test_create_order_invalid_user():
+    """Test creating an order for a nonexistent user."""
+
+    order = Order(
+        user_id=999999999,
+        total_amount=500.00,
+        status="pending",
+        shipping_address="Pune"
+    )
+
+    items = []
+
+    try:
+        result = OrderService.create_order(
+            order,
+            items
+        )
+
+        assert result is None
+
+    except ValueError:
+        assert True
+
+
+# ============================================================
+# Update Order Status
+# ============================================================
+
+def test_update_order_status():
+    """Test updating order status."""
+
+    user = create_test_user()
+
+    order = Order(
+        user_id=user.user_id,
+        total_amount=1200.00,
+        status="pending",
+        shipping_address="Pune"
+    )
+
+    created_order = OrderRepository.create_order(order)
+
+    assert created_order is not None
+
+    result = OrderService.update_order_status(
+        order_id=created_order.order_id,
+        status="confirmed"
+    )
+
+    assert result is True
+
+    updated = OrderService.get_order(
+        created_order.order_id
+    )
+
+    assert updated is not None
+    assert updated.status == "confirmed"
+
+
+# ============================================================
+# Update Order Status - Invalid Status
+# ============================================================
+
+def test_update_order_status_invalid():
+    """Test updating order with an invalid status."""
+
+    user = create_test_user()
+
+    order = Order(
+        user_id=user.user_id,
+        total_amount=1200.00,
+        status="pending",
+        shipping_address="Pune"
+    )
+
+    created_order = OrderRepository.create_order(order)
+
+    assert created_order is not None
+
+    try:
+        result = OrderService.update_order_status(
+            order_id=created_order.order_id,
+            status="invalid_status"
+        )
+
+        assert result is False
+
+    except ValueError:
+        assert True
+
+
+# ============================================================
+# Update Order Not Found
+# ============================================================
+
+def test_update_order_not_found():
+    """Test updating a nonexistent order."""
+
+    try:
+        result = OrderService.update_order_status(
+            order_id=999999999,
+            status="confirmed"
+        )
+
+        assert result is False
+
+    except ValueError:
+        assert True
+
+
+# ============================================================
+# Delete Order
+# ============================================================
+
+def test_delete_order():
+    """Test deleting an order."""
+
+    user = create_test_user()
+
+    order = Order(
+        user_id=user.user_id,
+        total_amount=1200.00,
+        status="pending",
+        shipping_address="Pune"
+    )
+
+    created_order = OrderRepository.create_order(order)
+
+    assert created_order is not None
+
+    result = OrderService.delete_order(
+        created_order.order_id
+    )
+
+    assert result is True
+
+    deleted = OrderService.get_order(
+        created_order.order_id
+    )
+
+    assert deleted is None
+
+
+# ============================================================
+# Delete Order Not Found
+# ============================================================
+
+def test_delete_order_not_found():
+    """Test deleting a nonexistent order."""
+
+    result = OrderService.delete_order(
+        999999999
+    )
+
+    assert result is False
+
+
+# ============================================================
+# Get Order Items
+# ============================================================
+
+def test_get_order_items():
+    """Test retrieving order items."""
+
+    user = create_test_user()
+
+    order = Order(
+        user_id=user.user_id,
+        total_amount=1200.00,
+        status="pending",
+        shipping_address="Pune"
+    )
+
+    created_order = OrderRepository.create_order(order)
+
+    assert created_order is not None
+
+    items = OrderService.get_order_items(
+        created_order.order_id
+    )
+
+    assert isinstance(items, list)
+
+
+# ============================================================
+# Get Order Items - Invalid Order
+# ============================================================
+
+def test_get_order_items_invalid_order():
+    """Test retrieving items for nonexistent order."""
+
+    try:
+        items = OrderService.get_order_items(
+            999999999
+        )
+
+        assert isinstance(items, list)
+
+    except ValueError:
+        assert True

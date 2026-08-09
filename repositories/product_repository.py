@@ -1,6 +1,4 @@
 """
-product_repository.py
----------------------
 Database operations for products.
 """
 
@@ -13,8 +11,14 @@ from models.product import Product
 class ProductRepository:
     """Handles CRUD operations for products."""
 
+    # ========================================================
+    # Create Product
+    # ========================================================
+
     @staticmethod
-    def create(product: Product) -> Optional[Product]:
+    def create(
+        product: Product
+    ) -> Optional[Product]:
         """Insert a new product into the database."""
 
         connection = get_connection()
@@ -46,7 +50,11 @@ class ProductRepository:
                 product.image_url
             )
 
-            cursor.execute(query, values)
+            cursor.execute(
+                query,
+                values
+            )
+
             connection.commit()
 
             product.product_id = cursor.lastrowid
@@ -56,6 +64,10 @@ class ProductRepository:
         finally:
             cursor.close()
             close_connection(connection)
+
+    # ========================================================
+    # Get Product By ID
+    # ========================================================
 
     @staticmethod
     def get_by_id(
@@ -68,7 +80,9 @@ class ProductRepository:
         if connection is None:
             return None
 
-        cursor = connection.cursor(dictionary=True)
+        cursor = connection.cursor(
+            dictionary=True
+        )
 
         try:
             query = """
@@ -112,6 +126,10 @@ class ProductRepository:
             cursor.close()
             close_connection(connection)
 
+    # ========================================================
+    # Get All Products
+    # ========================================================
+
     @staticmethod
     def get_all() -> list[Product]:
         """Return all products."""
@@ -121,7 +139,9 @@ class ProductRepository:
         if connection is None:
             return []
 
-        cursor = connection.cursor(dictionary=True)
+        cursor = connection.cursor(
+            dictionary=True
+        )
 
         try:
             query = """
@@ -166,8 +186,90 @@ class ProductRepository:
             cursor.close()
             close_connection(connection)
 
+    # ========================================================
+    # Search Products By Name
+    # ========================================================
+
     @staticmethod
-    def update(product: Product) -> bool:
+    def search_by_name(
+        search_term: str
+    ) -> list[Product]:
+        """
+        Search products by product name.
+
+        Uses a partial match so that searching for
+        'phone' can return products such as
+        'Smartphone' or 'Phone Case'.
+        """
+
+        connection = get_connection()
+
+        if connection is None:
+            return []
+
+        cursor = connection.cursor(
+            dictionary=True
+        )
+
+        try:
+            query = """
+                SELECT
+                    product_id,
+                    category_id,
+                    product_name,
+                    description,
+                    price,
+                    stock_quantity,
+                    image_path,
+                    created_at,
+                    updated_at
+                FROM products
+                WHERE product_name LIKE %s
+                ORDER BY product_id
+            """
+
+            values = (
+                f"%{search_term}%",
+            )
+
+            cursor.execute(
+                query,
+                values
+            )
+
+            rows = cursor.fetchall()
+
+            products = []
+
+            for row in rows:
+                product = Product(
+                    product_id=row["product_id"],
+                    category_id=row["category_id"],
+                    name=row["product_name"],
+                    description=row["description"] or "",
+                    price=float(row["price"]),
+                    stock=row["stock_quantity"],
+                    image_url=row["image_path"] or "",
+                    created_at=str(row["created_at"]),
+                    updated_at=str(row["updated_at"])
+                )
+
+                products.append(product)
+
+            return products
+
+        finally:
+            cursor.close()
+            close_connection(connection)
+
+    # ========================================================
+    # Update Product
+    # ========================================================
+
+    @staticmethod
+    def update(
+        product: Product
+    ) -> bool:
         """Update an existing product."""
 
         if product.product_id is None:
@@ -203,7 +305,11 @@ class ProductRepository:
                 product.product_id
             )
 
-            cursor.execute(query, values)
+            cursor.execute(
+                query,
+                values
+            )
+
             connection.commit()
 
             return cursor.rowcount > 0
@@ -212,8 +318,14 @@ class ProductRepository:
             cursor.close()
             close_connection(connection)
 
+    # ========================================================
+    # Delete Product
+    # ========================================================
+
     @staticmethod
-    def delete(product_id: int) -> bool:
+    def delete(
+        product_id: int
+    ) -> bool:
         """Delete a product by its ID."""
 
         connection = get_connection()

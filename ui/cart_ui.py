@@ -1,0 +1,378 @@
+"""
+Shopping cart user interface for PyCommerce.
+"""
+
+from typing import Optional
+
+from models.cart import Cart
+from services.cart_service import CartService
+
+from utils.console import console
+from utils.messages import success, error
+
+
+# ============================================================
+# Display Cart
+# ============================================================
+
+def display_cart(
+    items: list[Cart]
+) -> None:
+    """Display all items in the shopping cart."""
+
+    console.print(
+        "\n[bold cyan]=== Shopping Cart ===[/bold cyan]\n"
+    )
+
+    if not items:
+        console.print(
+            "[yellow]Your cart is empty.[/yellow]"
+        )
+        return
+
+    console.print(
+        "[bold]"
+        f"{'Product ID':<15}"
+        f"{'Quantity':<15}"
+        f"{'Unit Price':<15}"
+        f"{'Subtotal':<15}"
+        "[/bold]"
+    )
+
+    console.print("-" * 65)
+
+    total = 0.0
+
+    for item in items:
+
+        product_id = item.product_id
+        quantity = item.quantity
+        price = float(item.price)
+
+        subtotal = price * quantity
+
+        total += subtotal
+
+        console.print(
+            f"{str(product_id):<15}"
+            f"{str(quantity):<15}"
+            f"₹{price:<14.2f}"
+            f"₹{subtotal:<14.2f}"
+        )
+
+    console.print("-" * 65)
+
+    console.print(
+        f"[bold]Total: ₹{total:.2f}[/bold]"
+    )
+
+
+# ============================================================
+# View Cart
+# ============================================================
+
+def view_cart(
+    user_id: int
+) -> list[Cart]:
+    """Load and display a user's cart."""
+
+    try:
+        items = CartService.get_cart(
+            user_id
+        )
+
+        display_cart(items)
+
+        return items
+
+    except Exception as exc:
+        error(
+            f"Unable to load cart: {exc}"
+        )
+
+        return []
+
+
+# ============================================================
+# Add Product
+# ============================================================
+
+def add_to_cart(
+    user_id: int
+) -> bool:
+    """Add a product to the user's cart."""
+
+    console.print(
+        "\n[bold cyan]=== Add to Cart ===[/bold cyan]\n"
+    )
+
+    try:
+        product_id = int(
+            input(
+                "Product ID: "
+            ).strip()
+        )
+
+        quantity = int(
+            input(
+                "Quantity: "
+            ).strip()
+        )
+
+        result = CartService.add_to_cart(
+            user_id=user_id,
+            product_id=product_id,
+            quantity=quantity
+        )
+
+        if result:
+            success(
+                "Product added to cart."
+            )
+
+            return True
+
+        error(
+            "Unable to add product to cart."
+        )
+
+        return False
+
+    except ValueError as exc:
+        error(str(exc))
+        return False
+
+    except Exception as exc:
+        error(
+            f"Unable to add product: {exc}"
+        )
+
+        return False
+
+
+# ============================================================
+# Update Quantity
+# ============================================================
+
+def update_cart_item(
+    user_id: int
+) -> bool:
+    """Update the quantity of a cart item."""
+
+    console.print(
+        "\n[bold cyan]=== Update Cart Item ===[/bold cyan]\n"
+    )
+
+    try:
+        product_id = int(
+            input(
+                "Product ID: "
+            ).strip()
+        )
+
+        quantity = int(
+            input(
+                "New quantity: "
+            ).strip()
+        )
+
+        result = CartService.update_quantity(
+            user_id=user_id,
+            product_id=product_id,
+            quantity=quantity
+        )
+
+        if result:
+            success(
+                "Cart item updated successfully."
+            )
+
+            return True
+
+        error(
+            "Unable to update cart item."
+        )
+
+        return False
+
+    except ValueError as exc:
+        error(str(exc))
+        return False
+
+    except Exception as exc:
+        error(
+            f"Unable to update cart: {exc}"
+        )
+
+        return False
+
+
+# ============================================================
+# Remove Item
+# ============================================================
+
+def remove_from_cart(
+    user_id: int
+) -> bool:
+    """Remove a product from the user's cart."""
+
+    console.print(
+        "\n[bold cyan]=== Remove Cart Item ===[/bold cyan]\n"
+    )
+
+    try:
+        product_id = int(
+            input(
+                "Product ID: "
+            ).strip()
+        )
+
+        result = CartService.remove_from_cart(
+            user_id=user_id,
+            product_id=product_id
+        )
+
+        if result:
+            success(
+                "Product removed from cart."
+            )
+
+            return True
+
+        error(
+            "Unable to remove product from cart."
+        )
+
+        return False
+
+    except ValueError as exc:
+        error(str(exc))
+        return False
+
+    except Exception as exc:
+        error(
+            f"Unable to remove product: {exc}"
+        )
+
+        return False
+
+
+# ============================================================
+# Clear Cart
+# ============================================================
+
+def clear_cart(
+    user_id: int
+) -> bool:
+    """Remove all items from the user's cart."""
+
+    console.print(
+        "\n[bold cyan]=== Clear Cart ===[/bold cyan]\n"
+    )
+
+    confirmation = input(
+        "Are you sure you want to clear the cart? (y/n): "
+    ).strip().lower()
+
+    if confirmation != "y":
+        console.print(
+            "[yellow]Clear cart cancelled.[/yellow]"
+        )
+
+        return False
+
+    try:
+        result = CartService.clear_cart(
+            user_id
+        )
+
+        if result:
+            success(
+                "Cart cleared successfully."
+            )
+
+            return True
+
+        error(
+            "Unable to clear cart."
+        )
+
+        return False
+
+    except ValueError as exc:
+        error(str(exc))
+        return False
+
+    except Exception as exc:
+        error(
+            f"Unable to clear cart: {exc}"
+        )
+
+        return False
+
+
+# ============================================================
+# Cart Menu
+# ============================================================
+
+def cart_menu(
+    user_id: int
+) -> None:
+    """Display the shopping cart menu."""
+
+    while True:
+
+        console.print(
+            "\n[bold cyan]=== Shopping Cart ===[/bold cyan]"
+        )
+
+        console.print(
+            "1. View Cart"
+        )
+
+        console.print(
+            "2. Add Product"
+        )
+
+        console.print(
+            "3. Update Quantity"
+        )
+
+        console.print(
+            "4. Remove Product"
+        )
+
+        console.print(
+            "5. Clear Cart"
+        )
+
+        console.print(
+            "0. Back"
+        )
+
+        choice = input(
+            "\nEnter your choice: "
+        ).strip()
+
+        if choice == "1":
+            view_cart(user_id)
+
+        elif choice == "2":
+            add_to_cart(user_id)
+
+        elif choice == "3":
+            update_cart_item(user_id)
+
+        elif choice == "4":
+            remove_from_cart(user_id)
+
+        elif choice == "5":
+            clear_cart(user_id)
+
+        elif choice == "0":
+            break
+
+        else:
+            error(
+                "Invalid choice."
+            )

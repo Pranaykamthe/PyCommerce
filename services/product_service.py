@@ -1,6 +1,4 @@
 """
-product_service.py
-------------------
 Business logic related to products.
 """
 
@@ -12,6 +10,10 @@ from repositories.product_repository import ProductRepository
 
 class ProductService:
     """Provides business operations for products."""
+
+    # ========================================================
+    # Validation
+    # ========================================================
 
     @staticmethod
     def validate_product(
@@ -47,6 +49,10 @@ class ProductService:
                 "Product stock cannot be negative."
             )
 
+    # ========================================================
+    # Availability
+    # ========================================================
+
     @staticmethod
     def is_available(
         product: Product
@@ -60,6 +66,10 @@ class ProductService:
 
         return product.stock > 0
 
+    # ========================================================
+    # Increase Stock
+    # ========================================================
+
     @staticmethod
     def increase_stock(
         product: Product,
@@ -67,13 +77,6 @@ class ProductService:
     ) -> None:
         """
         Increase product stock.
-
-        Args:
-            product: Product whose stock should increase.
-            quantity: Quantity to add.
-
-        Raises:
-            ValueError: If quantity is invalid.
         """
 
         if quantity <= 0:
@@ -83,6 +86,10 @@ class ProductService:
 
         product.stock += quantity
 
+    # ========================================================
+    # Decrease Stock
+    # ========================================================
+
     @staticmethod
     def decrease_stock(
         product: Product,
@@ -90,14 +97,6 @@ class ProductService:
     ) -> None:
         """
         Decrease product stock.
-
-        Args:
-            product: Product whose stock should decrease.
-            quantity: Quantity to remove.
-
-        Raises:
-            ValueError: If quantity is invalid or
-                        stock is insufficient.
         """
 
         if quantity <= 0:
@@ -112,19 +111,16 @@ class ProductService:
 
         product.stock -= quantity
 
+    # ========================================================
+    # Create Product
+    # ========================================================
+
     @staticmethod
     def create_product(
         product: Product
     ) -> Optional[Product]:
         """
         Validate and create a product in the database.
-
-        Args:
-            product: Product object to create.
-
-        Returns:
-            Created Product object or None if database
-            connection fails.
         """
 
         ProductService.validate_product(
@@ -135,10 +131,20 @@ class ProductService:
         )
 
         product.name = product.name.strip()
-        product.description = product.description.strip()
-        product.image_url = product.image_url.strip()
+        product.description = (
+            product.description.strip()
+        )
+        product.image_url = (
+            product.image_url.strip()
+        )
 
-        return ProductRepository.create(product)
+        return ProductRepository.create(
+            product
+        )
+
+    # ========================================================
+    # Get Product
+    # ========================================================
 
     @staticmethod
     def get_product(
@@ -146,15 +152,6 @@ class ProductService:
     ) -> Optional[Product]:
         """
         Get a product by its ID.
-
-        Args:
-            product_id: ID of the product.
-
-        Returns:
-            Product object or None if not found.
-
-        Raises:
-            ValueError: If product ID is invalid.
         """
 
         if product_id <= 0:
@@ -166,16 +163,51 @@ class ProductService:
             product_id
         )
 
+    # ========================================================
+    # Get All Products
+    # ========================================================
+
     @staticmethod
     def get_all_products() -> list[Product]:
         """
         Get all products.
-
-        Returns:
-            List of Product objects.
         """
 
         return ProductRepository.get_all()
+
+    # ========================================================
+    # Search Products
+    # ========================================================
+
+    @staticmethod
+    def search_products(
+        search_term: str
+    ) -> list[Product]:
+        """
+        Search products by name.
+
+        Args:
+            search_term: Text to search for.
+
+        Returns:
+            List of matching Product objects.
+
+        Raises:
+            ValueError: If search term is empty.
+        """
+
+        if not search_term or not search_term.strip():
+            raise ValueError(
+                "Search term cannot be empty."
+            )
+
+        return ProductRepository.search_by_name(
+            search_term.strip()
+        )
+
+    # ========================================================
+    # Update Product
+    # ========================================================
 
     @staticmethod
     def update_product(
@@ -183,16 +215,6 @@ class ProductService:
     ) -> bool:
         """
         Validate and update an existing product.
-
-        Args:
-            product: Product object to update.
-
-        Returns:
-            True if the product was updated successfully.
-
-        Raises:
-            ValueError: If product ID or product data
-                        is invalid.
         """
 
         if product.product_id is None:
@@ -208,12 +230,20 @@ class ProductService:
         )
 
         product.name = product.name.strip()
-        product.description = product.description.strip()
-        product.image_url = product.image_url.strip()
+        product.description = (
+            product.description.strip()
+        )
+        product.image_url = (
+            product.image_url.strip()
+        )
 
         return ProductRepository.update(
             product
         )
+
+    # ========================================================
+    # Delete Product
+    # ========================================================
 
     @staticmethod
     def delete_product(
@@ -221,15 +251,6 @@ class ProductService:
     ) -> bool:
         """
         Delete a product.
-
-        Args:
-            product_id: ID of the product to delete.
-
-        Returns:
-            True if the product was deleted successfully.
-
-        Raises:
-            ValueError: If product ID is invalid.
         """
 
         if product_id <= 0:

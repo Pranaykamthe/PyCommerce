@@ -1,239 +1,230 @@
 """
-test_order_repository.py
-------------------------
-Integration tests for OrderRepository.
+Tests for OrderRepository.
 """
 
-import uuid
+from uuid import uuid4
 
 from models.order import Order
 from models.order_item import OrderItem
-from models.product import Product
 from models.user import User
 
 from repositories.order_repository import OrderRepository
-from repositories.product_repository import ProductRepository
 from repositories.user_repository import UserRepository
-from services.auth_service import AuthService
 
+
+# ============================================================
+# Test Data Helpers
+# ============================================================
 
 def create_test_user() -> User:
-    """Create a temporary test user."""
+    """Create a unique test user."""
 
-    email = (
-        f"order_test_{uuid.uuid4().hex[:10]}"
-        "@pycommerce.test"
-    )
+    unique_id = uuid4().hex[:8]
 
-    return User(
-        name="Order Test User",
-        email=email,
-        password=AuthService.hash_password(
-            "TestPassword123"
-        ),
-        phone="9999999999",
-        address="Test Address",
+    user = User(
+        name="Order Repository Test",
+        email=f"order_repo_{unique_id}@pycommerce.test",
+        password="pass12345",
+        phone=f"88888{unique_id[:5]}",
+        address="Pune",
         role="customer"
     )
 
+    created_user = UserRepository.create(user)
 
-def create_test_product() -> Product:
-    """Create a temporary test product."""
+    assert created_user is not None
+    assert created_user.user_id is not None
 
-    return Product(
-        category_id=1,
-        name=f"Order Test Product "
-             f"{uuid.uuid4().hex[:8]}",
-        description="Temporary order test product",
-        price=500.00,
-        stock=10,
-        image_url="order-test.jpg"
-    )
+    return created_user
 
 
-def test_create_order():
-    """Test creating an order."""
+def create_test_order() -> Order:
+    """Create a unique test order."""
 
-    user = UserRepository.create(
-        create_test_user()
-    )
-
-    assert user is not None
-    assert user.user_id is not None
+    user = create_test_user()
 
     order = Order(
         user_id=user.user_id,
         total_amount=1000.00,
         status="pending",
-        shipping_address="Test Address"
+        shipping_address="Pune"
     )
 
-    created_order = OrderRepository.create_order(
-        order
-    )
+    created_order = OrderRepository.create_order(order)
 
     assert created_order is not None
     assert created_order.order_id is not None
-    assert created_order.user_id == user.user_id
-    assert created_order.total_amount == 1000.00
-    assert created_order.status == "pending"
 
-    OrderRepository.delete_order(
-        created_order.order_id
+    return created_order
+
+
+def create_test_order_item(
+    order_id: int
+) -> OrderItem:
+    """Create a test order item."""
+
+    return OrderItem(
+        order_id=order_id,
+        product_id=278,
+        quantity=2,
+        price=500.00
     )
 
-    UserRepository.delete(
-        user.user_id
-    )
 
+# ============================================================
+# Create Order
+# ============================================================
+
+def test_create_order():
+    """Test creating an order."""
+
+    order = create_test_order()
+
+    assert order is not None
+    assert order.order_id is not None
+    assert order.user_id is not None
+    assert order.total_amount == 1000.00
+    assert order.status == "pending"
+    assert order.shipping_address == "Pune"
+
+
+# ============================================================
+# Get Order By ID
+# ============================================================
 
 def test_get_order_by_id():
     """Test retrieving an order by ID."""
 
-    user = UserRepository.create(
-        create_test_user()
+    created = create_test_order()
+
+    found = OrderRepository.get_order_by_id(
+        created.order_id
     )
 
-    assert user is not None
+    assert found is not None
+    assert found.order_id == created.order_id
+    assert found.user_id == created.user_id
+    assert found.total_amount == 1000.00
+    assert found.status == "pending"
+    assert found.shipping_address == "Pune"
 
-    order = Order(
-        user_id=user.user_id,
-        total_amount=750.00,
-        status="pending",
-        shipping_address="Test Address"
+
+# ============================================================
+# Get Order Not Found
+# ============================================================
+
+def test_get_order_not_found():
+    """Test retrieving a nonexistent order."""
+
+    order = OrderRepository.get_order_by_id(
+        999999999
     )
 
-    created_order = OrderRepository.create_order(
-        order
-    )
+    assert order is None
 
-    assert created_order is not None
 
-    retrieved_order = OrderRepository.get_order_by_id(
-        created_order.order_id
-    )
-
-    assert retrieved_order is not None
-    assert retrieved_order.order_id == (
-        created_order.order_id
-    )
-    assert retrieved_order.user_id == user.user_id
-
-    OrderRepository.delete_order(
-        created_order.order_id
-    )
-
-    UserRepository.delete(
-        user.user_id
-    )
-
+# ============================================================
+# Get Orders By User
+# ============================================================
 
 def test_get_orders_by_user():
     """Test retrieving orders belonging to a user."""
 
-    user = UserRepository.create(
-        create_test_user()
-    )
+    user = create_test_user()
 
-    assert user is not None
-
-    order = Order(
+    order1 = Order(
         user_id=user.user_id,
-        total_amount=300.00,
+        total_amount=500.00,
         status="pending",
-        shipping_address="Test Address"
+        shipping_address="Pune"
     )
 
-    created_order = OrderRepository.create_order(
-        order
+    order2 = Order(
+        user_id=user.user_id,
+        total_amount=750.00,
+        status="confirmed",
+        shipping_address="Mumbai"
     )
 
-    assert created_order is not None
+    created1 = OrderRepository.create_order(order1)
+    created2 = OrderRepository.create_order(order2)
+
+    assert created1 is not None
+    assert created2 is not None
 
     orders = OrderRepository.get_orders_by_user(
         user.user_id
     )
 
     assert isinstance(orders, list)
-    assert len(orders) >= 1
 
-    found = any(
-        item.order_id == created_order.order_id
-        for item in orders
-    )
+    order_ids = [
+        order.order_id
+        for order in orders
+    ]
 
-    assert found is True
+    assert created1.order_id in order_ids
+    assert created2.order_id in order_ids
 
-    OrderRepository.delete_order(
-        created_order.order_id
-    )
 
-    UserRepository.delete(
+# ============================================================
+# Get Orders By User - Not Found
+# ============================================================
+
+def test_get_orders_by_user_not_found():
+    """Test retrieving orders for a user with no orders."""
+
+    user = create_test_user()
+
+    orders = OrderRepository.get_orders_by_user(
         user.user_id
     )
 
+    assert isinstance(orders, list)
+    assert orders == []
+
+
+# ============================================================
+# Update Order
+# ============================================================
 
 def test_update_order():
-    """Test updating an order."""
+    """Test updating an existing order."""
 
-    user = UserRepository.create(
-        create_test_user()
-    )
+    created = create_test_order()
 
-    assert user is not None
-
-    order = Order(
-        user_id=user.user_id,
-        total_amount=500.00,
-        status="pending",
-        shipping_address="Old Address"
-    )
-
-    created_order = OrderRepository.create_order(
-        order
-    )
-
-    assert created_order is not None
-
-    created_order.total_amount = 750.00
-    created_order.status = "confirmed"
-    created_order.shipping_address = "New Address"
+    created.total_amount = 1500.00
+    created.status = "confirmed"
+    created.shipping_address = "Mumbai"
 
     result = OrderRepository.update_order(
-        created_order
+        created
     )
 
     assert result is True
 
-    updated_order = OrderRepository.get_order_by_id(
-        created_order.order_id
+    updated = OrderRepository.get_order_by_id(
+        created.order_id
     )
 
-    assert updated_order is not None
-    assert updated_order.total_amount == 750.00
-    assert updated_order.status == "confirmed"
-    assert updated_order.shipping_address == (
-        "New Address"
-    )
+    assert updated is not None
+    assert updated.total_amount == 1500.00
+    assert updated.status == "confirmed"
+    assert updated.shipping_address == "Mumbai"
 
-    OrderRepository.delete_order(
-        created_order.order_id
-    )
 
-    UserRepository.delete(
-        user.user_id
-    )
-
+# ============================================================
+# Update Order Without ID
+# ============================================================
 
 def test_update_order_without_id():
-    """Test updating an order without an ID."""
+    """Test updating an order without an order ID."""
 
     order = Order(
-        order_id=None,
         user_id=1,
-        total_amount=100.00,
+        total_amount=500.00,
         status="pending",
-        shipping_address="Test"
+        shipping_address="Pune"
     )
 
     result = OrderRepository.update_order(
@@ -243,279 +234,276 @@ def test_update_order_without_id():
     assert result is False
 
 
-def test_create_order_item():
-    """Test creating an order item."""
+# ============================================================
+# Update Order Status
+# ============================================================
 
-    user = UserRepository.create(
-        create_test_user()
-    )
+def test_update_order_status():
+    """Test updating order status."""
 
-    assert user is not None
+    created = create_test_order()
 
-    product = ProductRepository.create(
-        create_test_product()
-    )
-
-    assert product is not None
-    assert product.product_id is not None
-
-    order = Order(
-        user_id=user.user_id,
-        total_amount=1000.00,
-        status="pending",
-        shipping_address="Test Address"
-    )
-
-    created_order = OrderRepository.create_order(
-        order
-    )
-
-    assert created_order is not None
-
-    order_item = OrderItem(
-        order_id=created_order.order_id,
-        product_id=product.product_id,
-        quantity=2,
-        price=500.00
-    )
-
-    created_item = (
-        OrderRepository.create_order_item(
-            order_item
-        )
-    )
-
-    assert created_item is not None
-    assert created_item.order_item_id is not None
-
-    retrieved_item = (
-        OrderRepository.get_order_item_by_id(
-            created_item.order_item_id
-        )
-    )
-
-    assert retrieved_item is not None
-    assert retrieved_item.order_id == (
-        created_order.order_id
-    )
-    assert retrieved_item.product_id == (
-        product.product_id
-    )
-    assert retrieved_item.quantity == 2
-    assert retrieved_item.price == 500.00
-
-    OrderRepository.delete_order(
-        created_order.order_id
-    )
-
-    ProductRepository.delete(
-        product.product_id
-    )
-
-    UserRepository.delete(
-        user.user_id
-    )
-
-
-def test_get_order_items():
-    """Test retrieving all items for an order."""
-
-    user = UserRepository.create(
-        create_test_user()
-    )
-
-    assert user is not None
-
-    product = ProductRepository.create(
-        create_test_product()
-    )
-
-    assert product is not None
-
-    order = Order(
-        user_id=user.user_id,
-        total_amount=1000.00,
-        status="pending",
-        shipping_address="Test Address"
-    )
-
-    created_order = OrderRepository.create_order(
-        order
-    )
-
-    assert created_order is not None
-
-    item = OrderItem(
-        order_id=created_order.order_id,
-        product_id=product.product_id,
-        quantity=2,
-        price=500.00
-    )
-
-    OrderRepository.create_order_item(
-        item
-    )
-
-    items = OrderRepository.get_order_items(
-        created_order.order_id
-    )
-
-    assert isinstance(items, list)
-    assert len(items) == 1
-    assert items[0].quantity == 2
-    assert items[0].price == 500.00
-
-    OrderRepository.delete_order(
-        created_order.order_id
-    )
-
-    ProductRepository.delete(
-        product.product_id
-    )
-
-    UserRepository.delete(
-        user.user_id
-    )
-
-
-def test_update_order_item():
-    """Test updating an order item."""
-
-    user = UserRepository.create(
-        create_test_user()
-    )
-
-    assert user is not None
-
-    product = ProductRepository.create(
-        create_test_product()
-    )
-
-    assert product is not None
-
-    order = Order(
-        user_id=user.user_id,
-        total_amount=500.00,
-        status="pending",
-        shipping_address="Test Address"
-    )
-
-    created_order = OrderRepository.create_order(
-        order
-    )
-
-    assert created_order is not None
-
-    item = OrderItem(
-        order_id=created_order.order_id,
-        product_id=product.product_id,
-        quantity=1,
-        price=500.00
-    )
-
-    created_item = (
-        OrderRepository.create_order_item(item)
-    )
-
-    assert created_item is not None
-
-    created_item.quantity = 3
-    created_item.price = 450.00
-
-    result = (
-        OrderRepository.update_order_item(
-            created_item
+    result = OrderRepository.update_order(
+        Order(
+            order_id=created.order_id,
+            user_id=created.user_id,
+            total_amount=created.total_amount,
+            status="shipped",
+            shipping_address=created.shipping_address
         )
     )
 
     assert result is True
 
-    updated_item = (
-        OrderRepository.get_order_item_by_id(
-            created_item.order_item_id
-        )
+    updated = OrderRepository.get_order_by_id(
+        created.order_id
     )
 
-    assert updated_item is not None
-    assert updated_item.quantity == 3
-    assert updated_item.price == 450.00
+    assert updated is not None
+    assert updated.status == "shipped"
 
-    OrderRepository.delete_order(
-        created_order.order_id
+
+# ============================================================
+# Create Order Item
+# ============================================================
+
+def test_create_order_item():
+    """Test creating an order item."""
+
+    order = create_test_order()
+
+    item = create_test_order_item(
+        order.order_id
     )
 
-    ProductRepository.delete(
-        product.product_id
+    created = OrderRepository.create_order_item(
+        item
     )
 
-    UserRepository.delete(
-        user.user_id
+    assert created is not None
+    assert created.order_item_id is not None
+    assert created.order_id == order.order_id
+    assert created.product_id == 278
+    assert created.quantity == 2
+    assert created.price == 500.00
+
+
+# ============================================================
+# Get Order Items
+# ============================================================
+
+def test_get_order_items():
+    """Test retrieving items belonging to an order."""
+
+    order = create_test_order()
+
+    item = create_test_order_item(
+        order.order_id
     )
 
+    created = OrderRepository.create_order_item(
+        item
+    )
+
+    assert created is not None
+
+    items = OrderRepository.get_order_items(
+        order.order_id
+    )
+
+    assert isinstance(items, list)
+
+    item_ids = [
+        item.order_item_id
+        for item in items
+    ]
+
+    assert created.order_item_id in item_ids
+
+
+# ============================================================
+# Get Order Item By ID
+# ============================================================
+
+def test_get_order_item_by_id():
+    """Test retrieving an order item by ID."""
+
+    order = create_test_order()
+
+    item = create_test_order_item(
+        order.order_id
+    )
+
+    created = OrderRepository.create_order_item(
+        item
+    )
+
+    assert created is not None
+    assert created.order_item_id is not None
+
+    found = OrderRepository.get_order_item_by_id(
+        created.order_item_id
+    )
+
+    assert found is not None
+    assert found.order_item_id == created.order_item_id
+    assert found.order_id == order.order_id
+    assert found.product_id == 278
+    assert found.quantity == 2
+    assert found.price == 500.00
+
+
+# ============================================================
+# Get Order Item Not Found
+# ============================================================
+
+def test_get_order_item_not_found():
+    """Test retrieving a nonexistent order item."""
+
+    item = OrderRepository.get_order_item_by_id(
+        999999999
+    )
+
+    assert item is None
+
+
+# ============================================================
+# Update Order Item
+# ============================================================
+
+def test_update_order_item():
+    """Test updating an existing order item."""
+
+    order = create_test_order()
+
+    item = create_test_order_item(
+        order.order_id
+    )
+
+    created = OrderRepository.create_order_item(
+        item
+    )
+
+    assert created is not None
+    assert created.order_item_id is not None
+
+    created.quantity = 3
+    created.price = 600.00
+
+    result = OrderRepository.update_order_item(
+        created
+    )
+
+    assert result is True
+
+    updated = OrderRepository.get_order_item_by_id(
+        created.order_item_id
+    )
+
+    assert updated is not None
+    assert updated.quantity == 3
+    assert updated.price == 600.00
+
+
+# ============================================================
+# Update Order Item Without ID
+# ============================================================
+
+def test_update_order_item_without_id():
+    """Test updating an order item without ID."""
+
+    item = OrderItem(
+        order_id=1,
+        product_id=278,
+        quantity=2,
+        price=500.00
+    )
+
+    result = OrderRepository.update_order_item(
+        item
+    )
+
+    assert result is False
+
+
+# ============================================================
+# Delete Order Item
+# ============================================================
 
 def test_delete_order_item():
     """Test deleting an order item."""
 
-    user = UserRepository.create(
-        create_test_user()
+    order = create_test_order()
+
+    item = create_test_order_item(
+        order.order_id
     )
 
-    assert user is not None
-
-    product = ProductRepository.create(
-        create_test_product()
+    created = OrderRepository.create_order_item(
+        item
     )
 
-    assert product is not None
-
-    order = Order(
-        user_id=user.user_id,
-        total_amount=500.00,
-        status="pending",
-        shipping_address="Test Address"
-    )
-
-    created_order = OrderRepository.create_order(
-        order
-    )
-
-    assert created_order is not None
-
-    item = OrderItem(
-        order_id=created_order.order_id,
-        product_id=product.product_id,
-        quantity=1,
-        price=500.00
-    )
-
-    created_item = (
-        OrderRepository.create_order_item(item)
-    )
-
-    assert created_item is not None
+    assert created is not None
+    assert created.order_item_id is not None
 
     result = OrderRepository.delete_order_item(
-        created_item.order_item_id
+        created.order_item_id
     )
 
     assert result is True
 
-    deleted_item = (
-        OrderRepository.get_order_item_by_id(
-            created_item.order_item_id
-        )
+    deleted = OrderRepository.get_order_item_by_id(
+        created.order_item_id
     )
 
-    assert deleted_item is None
+    assert deleted is None
 
-    OrderRepository.delete_order(
-        created_order.order_id
+
+# ============================================================
+# Delete Order Item Not Found
+# ============================================================
+
+def test_delete_order_item_not_found():
+    """Test deleting a nonexistent order item."""
+
+    result = OrderRepository.delete_order_item(
+        999999999
     )
 
-    ProductRepository.delete(
-        product.product_id
+    assert result is False
+
+
+# ============================================================
+# Delete Order
+# ============================================================
+
+def test_delete_order():
+    """Test deleting an order."""
+
+    order = create_test_order()
+
+    result = OrderRepository.delete_order(
+        order.order_id
     )
 
-    UserRepository.delete(
-        user.user_id
+    assert result is True
+
+    deleted = OrderRepository.get_order_by_id(
+        order.order_id
     )
+
+    assert deleted is None
+
+
+# ============================================================
+# Delete Order Not Found
+# ============================================================
+
+def test_delete_order_not_found():
+    """Test deleting a nonexistent order."""
+
+    result = OrderRepository.delete_order(
+        999999999
+    )
+
+    assert result is False

@@ -1,6 +1,4 @@
 """
-payment.py
-----------
 Defines the Payment model for the PyCommerce project.
 """
 
