@@ -1,6 +1,4 @@
 """
-customer_ui.py
---------------
 Customer dashboard and menu for PyCommerce.
 """
 
@@ -95,7 +93,9 @@ def customer_menu(
 
         if choice == "1":
 
-            product_menu()
+            product_menu(
+                user.user_id
+            )
 
         elif choice == "2":
 

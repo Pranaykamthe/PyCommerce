@@ -1,6 +1,4 @@
 """
-product_ui.py
--------------
 Product-related user interface for PyCommerce.
 """
 
@@ -8,6 +6,7 @@ from typing import Optional
 
 from models.product import Product
 from services.product_service import ProductService
+from services.cart_service import CartService
 
 from utils.console import console
 from utils.messages import success, error
@@ -169,10 +168,92 @@ def search_products() -> None:
 
 
 # ============================================================
+# Add Product To Cart
+# ============================================================
+
+def add_product_to_cart(
+    user_id: int
+) -> bool:
+    """Add a product to the customer's cart."""
+
+    console.print(
+        "\n[bold cyan]=== Add Product To Cart ===[/bold cyan]\n"
+    )
+
+    try:
+        product_id = int(
+            input(
+                "Enter product ID: "
+            ).strip()
+        )
+
+        product = ProductService.get_product(
+            product_id
+        )
+
+        if product is None:
+            error(
+                "Product not found."
+            )
+            return False
+
+        console.print(
+            f"\n[bold]Product:[/bold] "
+            f"{product.name}"
+        )
+
+        console.print(
+            f"[bold]Price:[/bold] "
+            f"₹{product.price:.2f}"
+        )
+
+        console.print(
+            f"[bold]Available Stock:[/bold] "
+            f"{product.stock}"
+        )
+
+        quantity = int(
+            input(
+                "Enter quantity: "
+            ).strip()
+        )
+
+        result = CartService.add_to_cart(
+            user_id=user_id,
+            product_id=product_id,
+            quantity=quantity
+        )
+
+        if result:
+            success(
+                "Product added to cart successfully."
+            )
+            return True
+
+        error(
+            "Product could not be added to cart."
+        )
+
+        return False
+
+    except ValueError as exc:
+        error(str(exc))
+        return False
+
+    except Exception as exc:
+        error(
+            f"Unable to add product to cart: {exc}"
+        )
+        return False
+
+
+# ============================================================
 # Product Menu
 # ============================================================
 
-def product_menu() -> None:
+def product_menu(
+    user_id: Optional[int] = None
+) -> None:
     """Display the customer product menu."""
 
     while True:
@@ -194,7 +275,11 @@ def product_menu() -> None:
         )
 
         console.print(
-            "0. Back"
+            "4. Add Product to Cart"
+        )
+
+        console.print(
+            "5. Back"
         )
 
         choice = input(
@@ -202,12 +287,15 @@ def product_menu() -> None:
         ).strip()
 
         if choice == "1":
+
             browse_products()
 
         elif choice == "2":
+
             search_products()
 
         elif choice == "3":
+
             product_id_text = input(
                 "Enter product ID: "
             ).strip()
@@ -226,10 +314,27 @@ def product_menu() -> None:
                     "Product ID must be a number."
                 )
 
-        elif choice == "0":
+        elif choice == "4":
+
+            if user_id is None:
+
+                error(
+                    "Customer information is required "
+                    "to add products to cart."
+                )
+
+            else:
+
+                add_product_to_cart(
+                    user_id
+                )
+
+        elif choice == "5":
+
             break
 
         else:
+
             error(
                 "Invalid choice."
             )
@@ -293,9 +398,11 @@ def create_product_ui() -> Optional[Product]:
         )
 
         if created_product is None:
+
             error(
                 "Product could not be created."
             )
+
             return None
 
         success(
@@ -305,13 +412,16 @@ def create_product_ui() -> Optional[Product]:
         return created_product
 
     except ValueError as exc:
+
         error(str(exc))
         return None
 
     except Exception as exc:
+
         error(
             f"Unable to create product: {exc}"
         )
+
         return None
 
 
@@ -338,9 +448,11 @@ def update_product_ui() -> bool:
         )
 
         if product is None:
+
             error(
                 "Product not found."
             )
+
             return False
 
         console.print(
@@ -388,9 +500,11 @@ def update_product_ui() -> bool:
         )
 
         if result:
+
             success(
                 "Product updated successfully."
             )
+
             return True
 
         error(
@@ -400,13 +514,16 @@ def update_product_ui() -> bool:
         return False
 
     except ValueError as exc:
+
         error(str(exc))
         return False
 
     except Exception as exc:
+
         error(
             f"Unable to update product: {exc}"
         )
+
         return False
 
 
@@ -433,9 +550,11 @@ def delete_product_ui() -> bool:
         )
 
         if product is None:
+
             error(
                 "Product not found."
             )
+
             return False
 
         console.print(
@@ -447,9 +566,11 @@ def delete_product_ui() -> bool:
         ).strip().lower()
 
         if confirmation != "y":
+
             console.print(
                 "[yellow]Deletion cancelled.[/yellow]"
             )
+
             return False
 
         result = ProductService.delete_product(
@@ -457,9 +578,11 @@ def delete_product_ui() -> bool:
         )
 
         if result:
+
             success(
                 "Product deleted successfully."
             )
+
             return True
 
         error(
@@ -469,13 +592,16 @@ def delete_product_ui() -> bool:
         return False
 
     except ValueError as exc:
+
         error(str(exc))
         return False
 
     except Exception as exc:
+
         error(
             f"Unable to delete product: {exc}"
         )
+
         return False
 
 
@@ -517,21 +643,27 @@ def product_admin_menu() -> None:
         ).strip()
 
         if choice == "1":
+
             browse_products()
 
         elif choice == "2":
+
             create_product_ui()
 
         elif choice == "3":
+
             update_product_ui()
 
         elif choice == "4":
+
             delete_product_ui()
 
         elif choice == "0":
+
             break
 
         else:
+
             error(
                 "Invalid choice."
             )

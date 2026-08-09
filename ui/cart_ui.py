@@ -2,8 +2,6 @@
 Shopping cart user interface for PyCommerce.
 """
 
-from typing import Optional
-
 from models.cart import Cart
 from services.cart_service import CartService
 
@@ -25,9 +23,11 @@ def display_cart(
     )
 
     if not items:
+
         console.print(
             "[yellow]Your cart is empty.[/yellow]"
         )
+
         return
 
     console.print(
@@ -39,7 +39,9 @@ def display_cart(
         "[/bold]"
     )
 
-    console.print("-" * 65)
+    console.print(
+        "-" * 65
+    )
 
     total = 0.0
 
@@ -60,7 +62,9 @@ def display_cart(
             f"₹{subtotal:<14.2f}"
         )
 
-    console.print("-" * 65)
+    console.print(
+        "-" * 65
+    )
 
     console.print(
         f"[bold]Total: ₹{total:.2f}[/bold]"
@@ -77,15 +81,27 @@ def view_cart(
     """Load and display a user's cart."""
 
     try:
+
         items = CartService.get_cart(
             user_id
         )
 
-        display_cart(items)
+        display_cart(
+            items
+        )
 
         return items
 
+    except ValueError as exc:
+
+        error(
+            str(exc)
+        )
+
+        return []
+
     except Exception as exc:
+
         error(
             f"Unable to load cart: {exc}"
         )
@@ -107,6 +123,7 @@ def add_to_cart(
     )
 
     try:
+
         product_id = int(
             input(
                 "Product ID: "
@@ -126,6 +143,7 @@ def add_to_cart(
         )
 
         if result:
+
             success(
                 "Product added to cart."
             )
@@ -139,10 +157,15 @@ def add_to_cart(
         return False
 
     except ValueError as exc:
-        error(str(exc))
+
+        error(
+            str(exc)
+        )
+
         return False
 
     except Exception as exc:
+
         error(
             f"Unable to add product: {exc}"
         )
@@ -164,6 +187,7 @@ def update_cart_item(
     )
 
     try:
+
         product_id = int(
             input(
                 "Product ID: "
@@ -183,6 +207,7 @@ def update_cart_item(
         )
 
         if result:
+
             success(
                 "Cart item updated successfully."
             )
@@ -196,10 +221,15 @@ def update_cart_item(
         return False
 
     except ValueError as exc:
-        error(str(exc))
+
+        error(
+            str(exc)
+        )
+
         return False
 
     except Exception as exc:
+
         error(
             f"Unable to update cart: {exc}"
         )
@@ -221,6 +251,7 @@ def remove_from_cart(
     )
 
     try:
+
         product_id = int(
             input(
                 "Product ID: "
@@ -233,6 +264,7 @@ def remove_from_cart(
         )
 
         if result:
+
             success(
                 "Product removed from cart."
             )
@@ -246,10 +278,15 @@ def remove_from_cart(
         return False
 
     except ValueError as exc:
-        error(str(exc))
+
+        error(
+            str(exc)
+        )
+
         return False
 
     except Exception as exc:
+
         error(
             f"Unable to remove product: {exc}"
         )
@@ -275,6 +312,7 @@ def clear_cart(
     ).strip().lower()
 
     if confirmation != "y":
+
         console.print(
             "[yellow]Clear cart cancelled.[/yellow]"
         )
@@ -282,11 +320,13 @@ def clear_cart(
         return False
 
     try:
+
         result = CartService.clear_cart(
             user_id
         )
 
         if result:
+
             success(
                 "Cart cleared successfully."
             )
@@ -300,10 +340,15 @@ def clear_cart(
         return False
 
     except ValueError as exc:
-        error(str(exc))
+
+        error(
+            str(exc)
+        )
+
         return False
 
     except Exception as exc:
+
         error(
             f"Unable to clear cart: {exc}"
         )
@@ -355,24 +400,41 @@ def cart_menu(
         ).strip()
 
         if choice == "1":
-            view_cart(user_id)
+
+            view_cart(
+                user_id
+            )
 
         elif choice == "2":
-            add_to_cart(user_id)
+
+            add_to_cart(
+                user_id
+            )
 
         elif choice == "3":
-            update_cart_item(user_id)
+
+            update_cart_item(
+                user_id
+            )
 
         elif choice == "4":
-            remove_from_cart(user_id)
+
+            remove_from_cart(
+                user_id
+            )
 
         elif choice == "5":
-            clear_cart(user_id)
+
+            clear_cart(
+                user_id
+            )
 
         elif choice == "0":
+
             break
 
         else:
+
             error(
                 "Invalid choice."
             )
