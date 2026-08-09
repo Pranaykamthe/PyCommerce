@@ -25,6 +25,20 @@ class PaymentService:
         "refunded"
     }
 
+    ALLOWED_STATUS_TRANSITIONS = {
+        "pending": {
+            "successful",
+            "failed"
+        },
+        "successful": {
+            "refunded"
+        },
+        "failed": {
+            "pending"
+        },
+        "refunded": set()
+    }
+
     # ========================================================
     # Validation
     # ========================================================
@@ -99,6 +113,44 @@ class PaymentService:
         )
 
     @staticmethod
+    def validate_status_transition(
+        current_status: str,
+        new_status: str
+    ) -> None:
+        """
+        Validate whether a payment can move from
+        the current status to the new status.
+        """
+
+        current_status = (
+            current_status.strip().lower()
+        )
+
+        new_status = (
+            new_status.strip().lower()
+        )
+
+        PaymentService.validate_payment_status(
+            current_status
+        )
+
+        PaymentService.validate_payment_status(
+            new_status
+        )
+
+        allowed_statuses = (
+            PaymentService.ALLOWED_STATUS_TRANSITIONS[
+                current_status
+            ]
+        )
+
+        if new_status not in allowed_statuses:
+            raise ValueError(
+                f"Invalid payment status transition: "
+                f"{current_status} -> {new_status}."
+            )
+
+    @staticmethod
     def validate_amount(
         amount: float
     ) -> None:
@@ -126,6 +178,27 @@ class PaymentService:
                 "Order ID is required."
             )
 
+        # ----------------------------------------------------
+        # Normalize values before validation
+        # ----------------------------------------------------
+
+        payment.payment_method = (
+            payment.payment_method.strip().lower()
+        )
+
+        payment.status = (
+            payment.status.strip().lower()
+        )
+
+        if payment.transaction_id is not None:
+            payment.transaction_id = (
+                payment.transaction_id.strip()
+            )
+
+        # ----------------------------------------------------
+        # Validate normalized values
+        # ----------------------------------------------------
+
         PaymentService.validate_order_id(
             payment.order_id
         )
@@ -142,18 +215,9 @@ class PaymentService:
             payment.amount
         )
 
-        payment.payment_method = (
-            payment.payment_method.strip().lower()
-        )
-
-        payment.status = (
-            payment.status.strip().lower()
-        )
-
-        if payment.transaction_id is not None:
-            payment.transaction_id = (
-                payment.transaction_id.strip()
-            )
+        # ----------------------------------------------------
+        # Create payment
+        # ----------------------------------------------------
 
         return PaymentRepository.create(
             payment
@@ -219,6 +283,27 @@ class PaymentService:
                 "Order ID is required."
             )
 
+        # ----------------------------------------------------
+        # Normalize values before validation
+        # ----------------------------------------------------
+
+        payment.payment_method = (
+            payment.payment_method.strip().lower()
+        )
+
+        payment.status = (
+            payment.status.strip().lower()
+        )
+
+        if payment.transaction_id is not None:
+            payment.transaction_id = (
+                payment.transaction_id.strip()
+            )
+
+        # ----------------------------------------------------
+        # Validate normalized values
+        # ----------------------------------------------------
+
         PaymentService.validate_payment_id(
             payment.payment_id
         )
@@ -239,18 +324,9 @@ class PaymentService:
             payment.amount
         )
 
-        payment.payment_method = (
-            payment.payment_method.strip().lower()
-        )
-
-        payment.status = (
-            payment.status.strip().lower()
-        )
-
-        if payment.transaction_id is not None:
-            payment.transaction_id = (
-                payment.transaction_id.strip()
-            )
+        # ----------------------------------------------------
+        # Update payment
+        # ----------------------------------------------------
 
         return PaymentRepository.update(
             payment
@@ -267,15 +343,27 @@ class PaymentService:
     ) -> bool:
         """
         Update the status of a payment.
+
+        Only valid payment status transitions are allowed.
         """
 
         PaymentService.validate_payment_id(
             payment_id
         )
 
+        # ----------------------------------------------------
+        # Normalize status before validation
+        # ----------------------------------------------------
+
+        status = status.strip().lower()
+
         PaymentService.validate_payment_status(
             status
         )
+
+        # ----------------------------------------------------
+        # Get existing payment
+        # ----------------------------------------------------
 
         payment = PaymentRepository.get_by_id(
             payment_id
@@ -286,9 +374,28 @@ class PaymentService:
                 "Payment not found."
             )
 
-        payment.status = (
-            status.strip().lower()
+        # ----------------------------------------------------
+        # Get current status
+        # ----------------------------------------------------
+
+        current_status = (
+            payment.status.strip().lower()
         )
+
+        # ----------------------------------------------------
+        # Validate status transition
+        # ----------------------------------------------------
+
+        PaymentService.validate_status_transition(
+            current_status,
+            status
+        )
+
+        # ----------------------------------------------------
+        # Update status
+        # ----------------------------------------------------
+
+        payment.status = status
 
         return PaymentRepository.update(
             payment

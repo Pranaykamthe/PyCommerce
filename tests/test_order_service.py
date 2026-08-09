@@ -387,3 +387,111 @@ def test_get_order_items_invalid_order():
 
     except ValueError:
         assert True
+
+
+# ============================================================
+# Customer Order History Tests
+# ============================================================
+
+
+def test_get_user_orders_invalid_user():
+    """Test retrieving orders with an invalid user ID."""
+
+    try:
+        OrderService.get_user_orders(0)
+        assert False
+
+    except ValueError:
+        assert True
+
+
+def test_get_user_orders_negative_user():
+    """Test retrieving orders with a negative user ID."""
+
+    try:
+        OrderService.get_user_orders(-1)
+        assert False
+
+    except ValueError:
+        assert True
+
+
+def test_get_user_orders_returns_only_user_orders():
+    """
+    Test that customer order history contains only
+    orders belonging to the requested customer.
+    """
+
+    user1 = create_test_user()
+    user2 = create_test_user()
+
+    order1 = Order(
+        user_id=user1.user_id,
+        total_amount=500.00,
+        status="confirmed",
+        shipping_address="Pune"
+    )
+
+    order2 = Order(
+        user_id=user2.user_id,
+        total_amount=750.00,
+        status="confirmed",
+        shipping_address="Mumbai"
+    )
+
+    created1 = OrderRepository.create_order(order1)
+    created2 = OrderRepository.create_order(order2)
+
+    assert created1 is not None
+    assert created2 is not None
+
+    user1_orders = OrderService.get_user_orders(
+        user1.user_id
+    )
+
+    user1_order_ids = [
+        order.order_id
+        for order in user1_orders
+    ]
+
+    assert created1.order_id in user1_order_ids
+    assert created2.order_id not in user1_order_ids
+
+
+def test_get_user_orders_preserves_order_details():
+    """
+    Test that customer order history preserves
+    order status, total amount, and shipping address.
+    """
+
+    user = create_test_user()
+
+    order = Order(
+        user_id=user.user_id,
+        total_amount=1500.00,
+        status="confirmed",
+        shipping_address="Pune, Maharashtra"
+    )
+
+    created = OrderRepository.create_order(order)
+
+    assert created is not None
+
+    orders = OrderService.get_user_orders(
+        user.user_id
+    )
+
+    matching_orders = [
+        item
+        for item in orders
+        if item.order_id == created.order_id
+    ]
+
+    assert len(matching_orders) == 1
+
+    found = matching_orders[0]
+
+    assert found.user_id == user.user_id
+    assert found.total_amount == 1500.00
+    assert found.status == "confirmed"
+    assert found.shipping_address == "Pune, Maharashtra"
