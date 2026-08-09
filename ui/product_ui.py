@@ -28,9 +28,11 @@ def display_products(
     )
 
     if not products:
+
         console.print(
             "[yellow]No products available.[/yellow]"
         )
+
         return
 
     console.print(
@@ -42,6 +44,7 @@ def display_products(
     console.print("-" * 65)
 
     for product in products:
+
         console.print(
             f"{str(product.product_id):<6}"
             f"{product.name[:28]:<30}"
@@ -85,7 +88,9 @@ def browse_products() -> None:
 
                 products = ProductService.get_all_products()
 
-                display_products(products)
+                display_products(
+                    products
+                )
 
             except Exception as exc:
 
@@ -156,7 +161,9 @@ def browse_products_by_category() -> None:
 
             try:
 
-                category_index = int(choice)
+                category_index = int(
+                    choice
+                )
 
             except ValueError:
 
@@ -181,8 +188,10 @@ def browse_products_by_category() -> None:
                 category_index - 1
             ]
 
-            products = ProductService.get_products_by_category(
-                selected_category.category_id
+            products = (
+                ProductService.get_products_by_category(
+                    selected_category.category_id
+                )
             )
 
             console.print(
@@ -191,7 +200,9 @@ def browse_products_by_category() -> None:
                 f"===[/bold cyan]"
             )
 
-            display_products(products)
+            display_products(
+                products
+            )
 
     except Exception as exc:
 
@@ -261,7 +272,9 @@ def show_product_details(
 
     except ValueError as exc:
 
-        error(str(exc))
+        error(
+            str(exc)
+        )
 
         return None
 
@@ -303,7 +316,9 @@ def search_products() -> None:
             search_term
         )
 
-        display_products(products)
+        display_products(
+            products
+        )
 
     except Exception as exc:
 
@@ -388,7 +403,9 @@ def add_product_to_cart(
 
     except ValueError as exc:
 
-        error(str(exc))
+        error(
+            str(exc)
+        )
 
         return False
 
@@ -570,7 +587,9 @@ def create_product_ui() -> Optional[Product]:
 
     except ValueError as exc:
 
-        error(str(exc))
+        error(
+            str(exc)
+        )
 
         return None
 
@@ -677,7 +696,9 @@ def update_product_ui() -> bool:
 
     except ValueError as exc:
 
-        error(str(exc))
+        error(
+            str(exc)
+        )
 
         return False
 
@@ -757,7 +778,9 @@ def delete_product_ui() -> bool:
 
     except ValueError as exc:
 
-        error(str(exc))
+        error(
+            str(exc)
+        )
 
         return False
 
@@ -768,6 +791,252 @@ def delete_product_ui() -> bool:
         )
 
         return False
+
+
+# ============================================================
+# Admin Increase Stock
+# ============================================================
+
+def increase_stock_ui() -> bool:
+    """Increase stock for an existing product."""
+
+    console.print(
+        "\n[bold cyan]=== Add Stock ===[/bold cyan]\n"
+    )
+
+    try:
+
+        product_id = int(
+            input(
+                "Product ID: "
+            ).strip()
+        )
+
+        product = ProductService.get_product(
+            product_id
+        )
+
+        if product is None:
+
+            error(
+                "Product not found."
+            )
+
+            return False
+
+        console.print(
+            f"\n[bold]Product:[/bold] "
+            f"{product.name}"
+        )
+
+        console.print(
+            f"[bold]Current Stock:[/bold] "
+            f"{product.stock}"
+        )
+
+        quantity = int(
+            input(
+                "Quantity to add: "
+            ).strip()
+        )
+
+        ProductService.increase_stock(
+            product,
+            quantity
+        )
+
+        result = ProductService.update_product(
+            product
+        )
+
+        if result:
+
+            success(
+                f"Stock updated successfully. "
+                f"New stock: {product.stock}"
+            )
+
+            return True
+
+        error(
+            "Stock could not be updated."
+        )
+
+        return False
+
+    except ValueError as exc:
+
+        error(
+            str(exc)
+        )
+
+        return False
+
+    except Exception as exc:
+
+        error(
+            f"Unable to add stock: {exc}"
+        )
+
+        return False
+
+
+# ============================================================
+# Admin Decrease Stock
+# ============================================================
+
+def decrease_stock_ui() -> bool:
+    """Decrease stock for an existing product."""
+
+    console.print(
+        "\n[bold cyan]=== Remove Stock ===[/bold cyan]\n"
+    )
+
+    try:
+
+        product_id = int(
+            input(
+                "Product ID: "
+            ).strip()
+        )
+
+        product = ProductService.get_product(
+            product_id
+        )
+
+        if product is None:
+
+            error(
+                "Product not found."
+            )
+
+            return False
+
+        console.print(
+            f"\n[bold]Product:[/bold] "
+            f"{product.name}"
+        )
+
+        console.print(
+            f"[bold]Current Stock:[/bold] "
+            f"{product.stock}"
+        )
+
+        quantity = int(
+            input(
+                "Quantity to remove: "
+            ).strip()
+        )
+
+        ProductService.decrease_stock(
+            product,
+            quantity
+        )
+
+        result = ProductService.update_product(
+            product
+        )
+
+        if result:
+
+            success(
+                f"Stock updated successfully. "
+                f"New stock: {product.stock}"
+            )
+
+            return True
+
+        error(
+            "Stock could not be updated."
+        )
+
+        return False
+
+    except ValueError as exc:
+
+        error(
+            str(exc)
+        )
+
+        return False
+
+    except Exception as exc:
+
+        error(
+            f"Unable to remove stock: {exc}"
+        )
+
+        return False
+
+
+# ============================================================
+# Admin Stock Management
+# ============================================================
+
+def manage_stock_ui() -> None:
+    """Display stock-management options."""
+
+    while True:
+
+        console.print(
+            "\n[bold cyan]=== Stock Management ===[/bold cyan]"
+        )
+
+        console.print(
+            "1. Add Stock"
+        )
+
+        console.print(
+            "2. Remove Stock"
+        )
+
+        console.print(
+            "3. View Products"
+        )
+
+        console.print(
+            "0. Back"
+        )
+
+        choice = input(
+            "\nEnter your choice: "
+        ).strip()
+
+        if choice == "1":
+
+            increase_stock_ui()
+
+        elif choice == "2":
+
+            decrease_stock_ui()
+
+        elif choice == "3":
+
+            try:
+
+                products = (
+                    ProductService.get_all_products()
+                )
+
+                display_products(
+                    products
+                )
+
+            except Exception as exc:
+
+                error(
+                    f"Unable to load products: {exc}"
+                )
+
+        elif choice == "0":
+
+            break
+
+        else:
+
+            error(
+                "Invalid choice."
+            )
 
 
 # ============================================================
@@ -800,6 +1069,10 @@ def product_admin_menu() -> None:
         )
 
         console.print(
+            "5. Manage Stock"
+        )
+
+        console.print(
             "0. Back"
         )
 
@@ -822,6 +1095,10 @@ def product_admin_menu() -> None:
         elif choice == "4":
 
             delete_product_ui()
+
+        elif choice == "5":
+
+            manage_stock_ui()
 
         elif choice == "0":
 

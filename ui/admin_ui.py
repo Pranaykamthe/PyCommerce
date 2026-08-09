@@ -3,8 +3,12 @@ Administrator interface for PyCommerce.
 """
 
 from models.user import User
+from models.category import Category
 
 from services.user_service import UserService
+from services.product_service import ProductService
+from services.payment_service import PaymentService
+from services.category_service import CategoryService
 
 from ui.product_ui import product_admin_menu
 from ui.admin_order_ui import admin_order_menu
@@ -29,9 +33,11 @@ def display_users(
     )
 
     if not users:
+
         console.print(
             "[yellow]No users found.[/yellow]"
         )
+
         return
 
     console.print(
@@ -326,9 +332,6 @@ def update_user_ui() -> None:
 
             user.role = role
 
-        # UserService.update_user() expects
-        # the existing password hash.
-
         result = UserService.update_user(
             user
         )
@@ -533,6 +536,452 @@ def user_management_menu(
 
 
 # ============================================================
+# Category Display
+# ============================================================
+
+def display_categories(
+    categories: list[Category]
+) -> None:
+    """Display all active categories."""
+
+    console.print(
+        "\n[bold cyan]=== Categories ===[/bold cyan]\n"
+    )
+
+    if not categories:
+
+        console.print(
+            "[yellow]No categories found.[/yellow]"
+        )
+
+        return
+
+    console.print(
+        f"{'ID':<8}"
+        f"{'Name':<25}"
+        f"{'Description':<50}"
+    )
+
+    console.print("-" * 85)
+
+    for category in categories:
+
+        description = (
+            category.description
+            or "N/A"
+        )
+
+        console.print(
+            f"{str(category.category_id):<8}"
+            f"{category.name:<25}"
+            f"{description[:48]:<50}"
+        )
+
+
+# ============================================================
+# View All Categories
+# ============================================================
+
+def view_categories() -> None:
+    """Display all active categories."""
+
+    try:
+
+        categories = (
+            CategoryService.get_all_categories()
+        )
+
+        display_categories(
+            categories
+        )
+
+    except Exception as exc:
+
+        error(
+            f"Unable to load categories: {exc}"
+        )
+
+
+# ============================================================
+# View Category
+# ============================================================
+
+def view_category() -> None:
+    """Display one category by ID."""
+
+    console.print(
+        "\n[bold cyan]=== View Category ===[/bold cyan]\n"
+    )
+
+    try:
+
+        category_id = int(
+            input(
+                "Enter category ID: "
+            ).strip()
+        )
+
+        category = (
+            CategoryService.get_category(
+                category_id
+            )
+        )
+
+        if category is None:
+
+            error(
+                "Category not found."
+            )
+
+            return
+
+        console.print(
+            f"\n[bold]Category ID:[/bold] "
+            f"{category.category_id}"
+        )
+
+        console.print(
+            f"[bold]Name:[/bold] "
+            f"{category.name}"
+        )
+
+        console.print(
+            f"[bold]Description:[/bold] "
+            f"{category.description or 'N/A'}"
+        )
+
+        if category.created_at:
+
+            console.print(
+                f"[bold]Created:[/bold] "
+                f"{category.created_at}"
+            )
+
+    except ValueError as exc:
+
+        error(
+            str(exc)
+        )
+
+    except Exception as exc:
+
+        error(
+            f"Unable to load category: {exc}"
+        )
+
+
+# ============================================================
+# Create Category
+# ============================================================
+
+def create_category_ui() -> None:
+    """Create a new category."""
+
+    console.print(
+        "\n[bold cyan]=== Add Category ===[/bold cyan]\n"
+    )
+
+    try:
+
+        name = input(
+            "Category name: "
+        ).strip()
+
+        description = input(
+            "Description: "
+        ).strip()
+
+        category = Category(
+            name=name,
+            description=description
+        )
+
+        created_category = (
+            CategoryService.create_category(
+                category
+            )
+        )
+
+        if created_category is None:
+
+            error(
+                "Unable to create category."
+            )
+
+            return
+
+        success(
+            f"Category '{created_category.name}' "
+            "created successfully."
+        )
+
+    except ValueError as exc:
+
+        error(
+            str(exc)
+        )
+
+    except Exception as exc:
+
+        error(
+            f"Unable to create category: {exc}"
+        )
+
+
+# ============================================================
+# Update Category
+# ============================================================
+
+def update_category_ui() -> None:
+    """Update an existing category."""
+
+    console.print(
+        "\n[bold cyan]=== Update Category ===[/bold cyan]\n"
+    )
+
+    try:
+
+        category_id = int(
+            input(
+                "Enter category ID: "
+            ).strip()
+        )
+
+        category = (
+            CategoryService.get_category(
+                category_id
+            )
+        )
+
+        if category is None:
+
+            error(
+                "Category not found."
+            )
+
+            return
+
+        console.print(
+            f"\nCurrent name: {category.name}"
+        )
+
+        name = input(
+            "New name "
+            "(press Enter to keep current): "
+        ).strip()
+
+        if name:
+
+            category.name = name
+
+        console.print(
+            f"Current description: "
+            f"{category.description}"
+        )
+
+        description = input(
+            "New description "
+            "(press Enter to keep current): "
+        ).strip()
+
+        if description:
+
+            category.description = description
+
+        result = (
+            CategoryService.update_category(
+                category
+            )
+        )
+
+        if result:
+
+            success(
+                "Category updated successfully."
+            )
+
+        else:
+
+            error(
+                "Unable to update category."
+            )
+
+    except ValueError as exc:
+
+        error(
+            str(exc)
+        )
+
+    except Exception as exc:
+
+        error(
+            f"Unable to update category: {exc}"
+        )
+
+
+# ============================================================
+# Delete Category
+# ============================================================
+
+def delete_category_ui() -> None:
+    """Soft-delete a category."""
+
+    console.print(
+        "\n[bold cyan]=== Delete Category ===[/bold cyan]\n"
+    )
+
+    try:
+
+        category_id = int(
+            input(
+                "Enter category ID: "
+            ).strip()
+        )
+
+        category = (
+            CategoryService.get_category(
+                category_id
+            )
+        )
+
+        if category is None:
+
+            error(
+                "Category not found."
+            )
+
+            return
+
+        console.print(
+            f"\nCategory ID: "
+            f"{category.category_id}"
+        )
+
+        console.print(
+            f"Name: {category.name}"
+        )
+
+        console.print(
+            f"Description: "
+            f"{category.description or 'N/A'}"
+        )
+
+        confirmation = input(
+            "\nDelete this category? (y/n): "
+        ).strip().lower()
+
+        if confirmation != "y":
+
+            console.print(
+                "[yellow]Deletion cancelled.[/yellow]"
+            )
+
+            return
+
+        result = (
+            CategoryService.delete_category(
+                category_id
+            )
+        )
+
+        if result:
+
+            success(
+                "Category deleted successfully."
+            )
+
+        else:
+
+            error(
+                "Unable to delete category."
+            )
+
+    except ValueError as exc:
+
+        error(
+            str(exc)
+        )
+
+    except Exception as exc:
+
+        error(
+            f"Unable to delete category: {exc}"
+        )
+
+
+# ============================================================
+# Category Management Menu
+# ============================================================
+
+def category_management_menu() -> None:
+    """Display category management options."""
+
+    while True:
+
+        console.print(
+            "\n[bold cyan]=== Category Management ===[/bold cyan]"
+        )
+
+        console.print(
+            "1. View All Categories"
+        )
+
+        console.print(
+            "2. View Category"
+        )
+
+        console.print(
+            "3. Add Category"
+        )
+
+        console.print(
+            "4. Update Category"
+        )
+
+        console.print(
+            "5. Delete Category"
+        )
+
+        console.print(
+            "0. Back"
+        )
+
+        choice = input(
+            "\nEnter your choice: "
+        ).strip()
+
+        if choice == "1":
+
+            view_categories()
+
+        elif choice == "2":
+
+            view_category()
+
+        elif choice == "3":
+
+            create_category_ui()
+
+        elif choice == "4":
+
+            update_category_ui()
+
+        elif choice == "5":
+
+            delete_category_ui()
+
+        elif choice == "0":
+
+            break
+
+        else:
+
+            error(
+                "Invalid choice."
+            )
+
+
+# ============================================================
 # Admin Header
 # ============================================================
 
@@ -564,6 +1013,132 @@ def display_admin_header(
     console.print(
         f"[bold]Role:[/bold] {admin.role}"
     )
+
+
+# ============================================================
+# Admin Dashboard
+# ============================================================
+
+def admin_dashboard() -> None:
+    """Display an overview of the PyCommerce system."""
+
+    try:
+
+        users = UserService.get_all_users()
+        products = ProductService.get_all_products()
+        payments = PaymentService.get_all_payments()
+
+        console.print(
+            "\n[bold cyan]========================================[/bold cyan]"
+        )
+
+        console.print(
+            "[bold cyan]          Admin Dashboard              [/bold cyan]"
+        )
+
+        console.print(
+            "[bold cyan]========================================[/bold cyan]"
+        )
+
+        # ----------------------------------------------------
+        # System Summary
+        # ----------------------------------------------------
+
+        console.print(
+            "\n[bold]System Summary[/bold]\n"
+        )
+
+        console.print(
+            f"Total Users       : {len(users)}"
+        )
+
+        console.print(
+            f"Total Products    : {len(products)}"
+        )
+
+        console.print(
+            f"Total Payments    : {len(payments)}"
+        )
+
+        # ----------------------------------------------------
+        # Payment Statistics
+        # ----------------------------------------------------
+
+        payment_status_counts = {
+            status: 0
+            for status in PaymentService.ALLOWED_STATUSES
+        }
+
+        for payment in payments:
+
+            status = (
+                payment.status.strip().lower()
+            )
+
+            if status in payment_status_counts:
+
+                payment_status_counts[status] += 1
+
+        console.print(
+            "\n[bold]Payment Status[/bold]\n"
+        )
+
+        for status in (
+            "pending",
+            "successful",
+            "failed",
+            "refunded"
+        ):
+
+            console.print(
+                f"{status.capitalize():<15}: "
+                f"{payment_status_counts[status]}"
+            )
+
+        # ----------------------------------------------------
+        # Low Stock Products
+        # ----------------------------------------------------
+
+        low_stock_products = [
+            product
+            for product in products
+            if product.stock <= 5
+        ]
+
+        console.print(
+            "\n[bold]Low Stock Products "
+            "(5 or fewer)[/bold]\n"
+        )
+
+        if not low_stock_products:
+
+            console.print(
+                "[green]No low-stock products.[/green]"
+            )
+
+        else:
+
+            console.print(
+                f"{'ID':<8}"
+                f"{'Product':<30}"
+                f"{'Stock':<10}"
+            )
+
+            console.print("-" * 48)
+
+            for product in low_stock_products:
+
+                console.print(
+                    f"{str(product.product_id):<8}"
+                    f"{product.name:<30}"
+                    f"{product.stock:<10}"
+                )
+
+    except Exception as exc:
+
+        error(
+            f"Unable to load dashboard: {exc}"
+        )
 
 
 # ============================================================
@@ -602,23 +1177,31 @@ def admin_menu(
         )
 
         console.print(
-            "1. Product Management"
+            "1. Dashboard"
         )
 
         console.print(
-            "2. Order Management"
+            "2. Product Management"
         )
 
         console.print(
-            "3. Payment Management"
+            "3. Category Management"
         )
 
         console.print(
-            "4. User Management"
+            "4. Order Management"
         )
 
         console.print(
-            "5. Logout"
+            "5. Payment Management"
+        )
+
+        console.print(
+            "6. User Management"
+        )
+
+        console.print(
+            "7. Logout"
         )
 
         choice = input(
@@ -627,23 +1210,31 @@ def admin_menu(
 
         if choice == "1":
 
-            product_admin_menu()
+            admin_dashboard()
 
         elif choice == "2":
 
-            admin_order_menu()
+            product_admin_menu()
 
         elif choice == "3":
 
-            admin_payment_menu()
+            category_management_menu()
 
         elif choice == "4":
+
+            admin_order_menu()
+
+        elif choice == "5":
+
+            admin_payment_menu()
+
+        elif choice == "6":
 
             user_management_menu(
                 admin.user_id
             )
 
-        elif choice == "5":
+        elif choice == "7":
 
             logout_user(
                 admin
