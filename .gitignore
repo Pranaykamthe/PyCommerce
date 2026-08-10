@@ -24,3 +24,9 @@ Thumbs.db
 
 .pytest_cache/
 *.pyc
+
+# Coverage
+
+.coverage
+coverage.xml
+htmlcov/
