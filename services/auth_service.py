@@ -1,15 +1,25 @@
 """
-auth_service.py
----------------
 Authentication and password management for PyCommerce.
 """
 
 import hashlib
+import hmac
+import os
 import re
 from typing import Optional
 
 from models.user import User
 from repositories.user_repository import UserRepository
+
+
+# ========================================================
+# Password Security Configuration
+# ========================================================
+
+PASSWORD_ALGORITHM = "pbkdf2_sha256"
+PASSWORD_ITERATIONS = 500_000
+SALT_LENGTH = 16
+HASH_LENGTH = 32
 
 
 class AuthService:
@@ -22,10 +32,16 @@ class AuthService:
     @staticmethod
     def hash_password(password: str) -> str:
         """
-        Hash a password using SHA-256.
+        Hash a password using PBKDF2-HMAC-SHA256.
+
+        A random salt is generated for every password.
 
         Returns:
-            str: Hexadecimal password hash.
+            str: Encoded password hash containing:
+                algorithm,
+                iterations,
+                salt,
+                and derived key.
         """
 
         if not password:
@@ -33,25 +49,103 @@ class AuthService:
                 "Password cannot be empty."
             )
 
-        return hashlib.sha256(
-            password.encode("utf-8")
-        ).hexdigest()
+        salt = os.urandom(
+            SALT_LENGTH
+        )
+
+        derived_key = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode("utf-8"),
+            salt,
+            PASSWORD_ITERATIONS,
+            dklen=HASH_LENGTH
+        )
+
+        return (
+            f"{PASSWORD_ALGORITHM}$"
+            f"{PASSWORD_ITERATIONS}$"
+            f"{salt.hex()}$"
+            f"{derived_key.hex()}"
+        )
 
     @staticmethod
     def verify_password(
         password: str,
         password_hash: str
     ) -> bool:
-        """Verify a plain password against a stored hash."""
+        """
+        Verify a password against a stored hash.
+
+        Supports:
+        - PBKDF2-HMAC-SHA256 hashes
+        - Legacy SHA-256 hashes
+
+        Returns:
+            bool: True if the password is valid,
+            otherwise False.
+        """
 
         if not password or not password_hash:
             return False
 
-        hashed_password = (
-            AuthService.hash_password(password)
-        )
+        # ====================================================
+        # New PBKDF2-SHA256 Format
+        # ====================================================
 
-        return hashed_password == password_hash
+        if password_hash.startswith(
+            f"{PASSWORD_ALGORITHM}$"
+        ):
+
+            try:
+                (
+                    algorithm,
+                    iterations,
+                    salt_hex,
+                    stored_hash
+                ) = password_hash.split("$")
+
+                if algorithm != PASSWORD_ALGORITHM:
+                    return False
+
+                salt = bytes.fromhex(
+                    salt_hex
+                )
+
+                derived_key = hashlib.pbkdf2_hmac(
+                    "sha256",
+                    password.encode("utf-8"),
+                    salt,
+                    int(iterations),
+                    dklen=HASH_LENGTH
+                )
+
+                return hmac.compare_digest(
+                    derived_key.hex(),
+                    stored_hash
+                )
+
+            except (
+                ValueError,
+                TypeError
+            ):
+                return False
+
+        # ====================================================
+        # Legacy SHA-256 Compatibility
+        # ====================================================
+
+        if len(password_hash) == 64:
+
+            legacy_hash = hashlib.sha256(
+                password.encode("utf-8")
+            ).hexdigest()
+
+            return hmac.compare_digest(
+                legacy_hash,
+                password_hash
+            )
+
+        return False
 
     # ========================================================
     # Email Validation
@@ -170,8 +264,12 @@ class AuthService:
         """
         Authenticate a user.
 
-        Returns the User object if credentials are valid.
-        Returns None if authentication fails.
+        Returns:
+            User object if credentials are valid.
+            None if authentication fails.
+
+        Legacy SHA-256 passwords are automatically upgraded
+        to PBKDF2 after successful authentication.
         """
 
         AuthService.validate_email(
@@ -198,6 +296,22 @@ class AuthService:
         ):
             return None
 
+        # ====================================================
+        # Upgrade Legacy SHA-256 Password
+        # ====================================================
+
+        if len(user.password) == 64:
+
+            user.password = (
+                AuthService.hash_password(
+                    password
+                )
+            )
+
+            UserRepository.update(
+                user
+            )
+
         return user
 
     # ========================================================
@@ -214,6 +328,10 @@ class AuthService:
             return False
 
         return user.role == "admin"
+
+    # ========================================================
+    # Customer Authentication
+    # ========================================================
 
     @staticmethod
     def is_customer(

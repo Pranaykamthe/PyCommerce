@@ -1,9 +1,8 @@
 """
-test_auth_service.py
---------------------
 Tests for AuthService.
 """
 
+import hashlib
 import uuid
 
 import pytest
@@ -26,11 +25,13 @@ def test_hash_password():
     )
 
     assert hashed != password
-    assert len(hashed) == 64
+    assert hashed.startswith(
+        "pbkdf2_sha256$"
+    )
 
 
-def test_same_password_same_hash():
-    """Test deterministic password hashing."""
+def test_same_password_produces_different_hashes():
+    """Test that password hashing uses a random salt."""
 
     password = "password123"
 
@@ -42,7 +43,17 @@ def test_same_password_same_hash():
         password
     )
 
-    assert hash_one == hash_two
+    assert hash_one != hash_two
+
+    assert AuthService.verify_password(
+        password,
+        hash_one
+    ) is True
+
+    assert AuthService.verify_password(
+        password,
+        hash_two
+    ) is True
 
 
 def test_verify_correct_password():
@@ -80,6 +91,35 @@ def test_hash_empty_password():
 
     with pytest.raises(ValueError):
         AuthService.hash_password("")
+
+
+def test_verify_legacy_sha256_password():
+    """Test compatibility with legacy SHA-256 passwords."""
+
+    password = "password123"
+
+    legacy_hash = hashlib.sha256(
+        password.encode("utf-8")
+    ).hexdigest()
+
+    assert AuthService.verify_password(
+        password,
+        legacy_hash
+    ) is True
+
+    assert AuthService.verify_password(
+        "wrongpassword",
+        legacy_hash
+    ) is False
+
+
+def test_verify_malformed_password_hash():
+    """Test malformed password hashes."""
+
+    assert AuthService.verify_password(
+        "password123",
+        "pbkdf2_sha256$invalid"
+    ) is False
 
 
 # ============================================================
@@ -154,7 +194,15 @@ def test_register_user():
 
     # Password must be hashed.
     assert user.password != "TestPassword123"
-    assert len(user.password) == 64
+    assert user.password.startswith(
+        "pbkdf2_sha256$"
+    )
+
+    # Password must verify correctly.
+    assert AuthService.verify_password(
+        "TestPassword123",
+        user.password
+    ) is True
 
     # Cleanup.
     UserRepository.delete(

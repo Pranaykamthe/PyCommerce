@@ -1,6 +1,4 @@
 """
-test_user_service.py
---------------------
 Tests for UserService.
 """
 
@@ -159,7 +157,17 @@ def test_create_user_password_hash():
     )
 
     assert hashed_password != password
-    assert len(hashed_password) == 64
+
+    # Password should use the new PBKDF2 format.
+    assert hashed_password.startswith(
+        "pbkdf2_sha256$"
+    )
+
+    # Hashed password must verify correctly.
+    assert AuthService.verify_password(
+        password,
+        hashed_password
+    ) is True
 
 
 # ============================================================
