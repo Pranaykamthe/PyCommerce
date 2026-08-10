@@ -4,6 +4,7 @@ Tests for UserService.
 
 import pytest
 
+from unittest.mock import patch
 from models.user import User
 from services.auth_service import AuthService
 from services.user_service import UserService
@@ -210,6 +211,203 @@ def test_update_user_without_id():
         name="Test User",
         email="test@example.com",
         password="hashed_password",
+        phone="",
+        address="",
+        role="customer"
+    )
+
+    with pytest.raises(ValueError):
+        UserService.update_user(user)
+
+
+# ============================================================
+# UserService Business Logic Tests
+# ============================================================
+
+def test_create_user():
+    """Test creating a user through UserService."""
+
+    user = User(
+        name="  Pranay  ",
+        email="  PRANAY@EXAMPLE.COM  ",
+        password="password123",
+        phone=" 9999999999 ",
+        address=" Pune ",
+        role="customer"
+    )
+
+    with patch(
+        "services.user_service.AuthService.hash_password",
+        return_value="hashed_password"
+    ) as mock_hash, patch(
+        "services.user_service.UserRepository.create",
+        return_value=user
+    ) as mock_create:
+
+        result = UserService.create_user(user)
+
+    assert result is user
+
+    assert user.name == "Pranay"
+    assert user.email == "pranay@example.com"
+    assert user.phone == "9999999999"
+    assert user.address == "Pune"
+    assert user.password == "hashed_password"
+
+    mock_hash.assert_called_once_with(
+        "password123"
+    )
+
+    mock_create.assert_called_once_with(
+        user
+    )
+
+
+def test_get_user():
+    """Test retrieving a user by ID."""
+
+    user = User(
+        user_id=1,
+        name="Pranay",
+        email="pranay@example.com",
+        password="hashed_password",
+        phone="9999999999",
+        address="Pune",
+        role="customer"
+    )
+
+    with patch(
+        "services.user_service.UserRepository.get_by_id",
+        return_value=user
+    ) as mock_get:
+
+        result = UserService.get_user(1)
+
+    assert result is user
+
+    mock_get.assert_called_once_with(1)
+
+
+def test_get_user_by_email():
+    """Test retrieving a user by email."""
+
+    user = User(
+        user_id=1,
+        name="Pranay",
+        email="pranay@example.com",
+        password="hashed_password",
+        phone="9999999999",
+        address="Pune",
+        role="customer"
+    )
+
+    with patch(
+        "services.user_service.UserRepository.get_by_email",
+        return_value=user
+    ) as mock_get:
+
+        result = UserService.get_user_by_email(
+            "  PRANAY@EXAMPLE.COM  "
+        )
+
+    assert result is user
+
+    mock_get.assert_called_once_with(
+        "pranay@example.com"
+    )
+
+
+def test_get_all_users():
+    """Test retrieving all active users."""
+
+    users = [
+        User(
+            user_id=1,
+            name="Pranay",
+            email="pranay@example.com",
+            password="hashed_password",
+            phone="9999999999",
+            address="Pune",
+            role="customer"
+        ),
+        User(
+            user_id=2,
+            name="Admin",
+            email="admin@example.com",
+            password="hashed_password",
+            phone="8888888888",
+            address="Mumbai",
+            role="admin"
+        )
+    ]
+
+    with patch(
+        "services.user_service.UserRepository.get_all",
+        return_value=users
+    ) as mock_get:
+
+        result = UserService.get_all_users()
+
+    assert result == users
+
+    mock_get.assert_called_once_with()
+
+
+def test_update_user():
+    """Test updating an existing user."""
+
+    user = User(
+        user_id=1,
+        name="  Updated User  ",
+        email="  UPDATED@EXAMPLE.COM  ",
+        password="hashed_password",
+        phone=" 8888888888 ",
+        address=" Mumbai ",
+        role="customer"
+    )
+
+    with patch(
+        "services.user_service.UserRepository.update",
+        return_value=True
+    ) as mock_update:
+
+        result = UserService.update_user(user)
+
+    assert result is True
+
+    assert user.name == "Updated User"
+    assert user.email == "updated@example.com"
+    assert user.phone == "8888888888"
+    assert user.address == "Mumbai"
+    assert user.password == "hashed_password"
+
+    mock_update.assert_called_once_with(
+        user
+    )
+
+
+def test_delete_user():
+    """Test deleting a user through UserService."""
+
+    with patch(
+        "services.user_service.UserRepository.delete",
+        return_value=True
+    ) as mock_delete:
+
+        result = UserService.delete_user(1)
+
+    assert result is True
+
+    mock_delete.assert_called_once_with(1)
+
+def test_update_user_without_password():
+    """Test updating a user without a password hash."""
+
+    user = User(
+        user_id=1,
+        name="Test User",
+        email="test@example.com",
+        password="",
         phone="",
         address="",
         role="customer"
