@@ -1,34 +1,42 @@
 """
-order_item.py
--------------
-Defines the OrderItem model for the PyCommerce project.
+OrderItem model.
+
+Represents a single product belonging to an order.
 """
 
-from dataclasses import dataclass
-from typing import Optional
 
-
-@dataclass
 class OrderItem:
-    """
-    Represents an individual product within an order.
-    """
+    """Represents an item inside an order."""
 
-    order_item_id: Optional[int] = None
-    order_id: Optional[int] = None
-    product_id: Optional[int] = None
-    quantity: int = 1
-    price: float = 0.0
+    def __init__(
+        self,
+        order_item_id=None,
+        order_id=None,
+        product_id=None,
+        quantity=1,
+        price=0.0,
+        subtotal=None
+    ):
+        self.order_item_id = order_item_id
+        self.order_id = order_id
+        self.product_id = product_id
+        self.quantity = quantity
+        self.price = price
 
-    def __str__(self) -> str:
-        """Return a readable representation of the order item."""
+        # Calculate automatically when subtotal is not supplied.
+        if subtotal is None:
+            self.subtotal = quantity * price
+        else:
+            self.subtotal = subtotal
 
+    def __repr__(self):
         return (
             f"OrderItem("
-            f"id={self.order_item_id}, "
+            f"order_item_id={self.order_item_id}, "
             f"order_id={self.order_id}, "
             f"product_id={self.product_id}, "
             f"quantity={self.quantity}, "
-            f"price={self.price}"
+            f"price={self.price}, "
+            f"subtotal={self.subtotal}"
             f")"
         )

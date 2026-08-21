@@ -1,8 +1,11 @@
-def main():
-    print("=" * 50)
-    print("         Welcome to PyCommerce")
-    print("=" * 50)
+"""
+main.py
+-------
+Main entry point for PyCommerce.
+"""
+
+from ui.main_ui import run_application
 
 
 if __name__ == "__main__":
-    main()
+    run_application()

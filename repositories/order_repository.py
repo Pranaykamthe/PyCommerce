@@ -305,6 +305,10 @@ class OrderRepository:
                 cursor.lastrowid
             )
 
+            # Keep the model synchronized with
+            # the value stored in the database.
+            order_item.subtotal = subtotal
+
             return order_item
 
         finally:
@@ -331,7 +335,8 @@ class OrderRepository:
                     order_id,
                     product_id,
                     quantity,
-                    unit_price
+                    unit_price,
+                    subtotal
                 FROM order_items
                 WHERE order_item_id = %s
             """
@@ -351,7 +356,8 @@ class OrderRepository:
                 order_id=row["order_id"],
                 product_id=row["product_id"],
                 quantity=row["quantity"],
-                price=float(row["unit_price"])
+                price=float(row["unit_price"]),
+                subtotal=float(row["subtotal"])
             )
 
         finally:
@@ -378,7 +384,8 @@ class OrderRepository:
                     order_id,
                     product_id,
                     quantity,
-                    unit_price
+                    unit_price,
+                    subtotal
                 FROM order_items
                 WHERE order_id = %s
                 ORDER BY order_item_id
@@ -399,7 +406,8 @@ class OrderRepository:
                     order_id=row["order_id"],
                     product_id=row["product_id"],
                     quantity=row["quantity"],
-                    price=float(row["unit_price"])
+                    price=float(row["unit_price"]),
+                    subtotal=float(row["subtotal"])
                 )
 
                 items.append(item)
@@ -452,6 +460,9 @@ class OrderRepository:
 
             cursor.execute(query, values)
             connection.commit()
+
+            # Keep the model synchronized.
+            order_item.subtotal = subtotal
 
             return cursor.rowcount > 0
 
