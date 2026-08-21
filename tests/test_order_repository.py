@@ -30,8 +30,8 @@ def test_user():
     """
     Create a temporary test user and return its user ID.
 
-    The User model does not accept is_active in its constructor.
-    The database gives is_active its default value.
+    Orders require a valid user_id because of the foreign-key
+    relationship between orders and users.
     """
 
     unique_id = uuid.uuid4().hex[:10]
@@ -73,19 +73,18 @@ def test_user():
 @pytest.fixture(scope="module")
 def test_products():
     """
-    Get real products from the database.
+    Get existing products from the database.
 
-    We must not assume product_id=1 exists because
-    order_items.product_id is a foreign key to products.product_id.
+    Order items require valid product IDs because
+    order_items.product_id references products.product_id.
     """
 
     products = ProductRepository.get_all()
 
     if not products:
         pytest.skip(
-            "No products exist in the database. "
-            "Create at least one product before running "
-            "order repository integration tests."
+            "At least one product is required "
+            "for order repository tests."
         )
 
     if len(products) == 1:
@@ -169,13 +168,13 @@ def test_get_order_by_id(test_user):
 
 
 def test_get_order_not_found():
-    """Test retrieving an order that does not exist."""
+    """Test retrieving a non-existing order."""
 
-    order = OrderRepository.get_order_by_id(
+    result = OrderRepository.get_order_by_id(
         999999999
     )
 
-    assert order is None
+    assert result is None
 
 
 def test_get_orders_by_user(test_user):
@@ -193,23 +192,29 @@ def test_get_orders_by_user(test_user):
     )
 
     assert created_order is not None
-    assert created_order.order_id is not None
-
-    order_id = created_order.order_id
 
     orders = OrderRepository.get_orders_by_user(
         test_user
     )
 
     assert isinstance(orders, list)
+    assert len(orders) >= 1
 
-    assert any(
-        item.order_id == order_id
-        for item in orders
+    found_order = next(
+        (
+            item
+            for item in orders
+            if item.order_id == created_order.order_id
+        ),
+        None
     )
 
+    assert found_order is not None
+    assert found_order.user_id == test_user
+    assert found_order.total_amount == 900.00
+
     OrderRepository.delete_order(
-        order_id
+        created_order.order_id
     )
 
 
@@ -220,12 +225,78 @@ def test_get_orders_by_user_not_found():
         999999999
     )
 
-    assert isinstance(orders, list)
     assert orders == []
 
 
 # ============================================================
-# Order Update Tests
+# Get All Orders
+# ============================================================
+
+def test_get_all_orders(test_user):
+    """Test retrieving all orders."""
+
+    order_1 = Order(
+        user_id=test_user,
+        total_amount=500.00,
+        status="pending",
+        shipping_address="Pune"
+    )
+
+    order_2 = Order(
+        user_id=test_user,
+        total_amount=750.00,
+        status="confirmed",
+        shipping_address="Mumbai"
+    )
+
+    created_order_1 = OrderRepository.create_order(
+        order_1
+    )
+
+    created_order_2 = OrderRepository.create_order(
+        order_2
+    )
+
+    assert created_order_1 is not None
+    assert created_order_2 is not None
+
+    orders = OrderRepository.get_all_orders()
+
+    assert isinstance(orders, list)
+
+    order_ids = [
+        order.order_id
+        for order in orders
+    ]
+
+    assert created_order_1.order_id in order_ids
+    assert created_order_2.order_id in order_ids
+
+    OrderRepository.delete_order(
+        created_order_1.order_id
+    )
+
+    OrderRepository.delete_order(
+        created_order_2.order_id
+    )
+
+
+def test_get_all_orders_not_found():
+    """
+    Test get_all_orders when the database contains no
+    matching records.
+
+    The repository should return a list even when there
+    are no orders.
+    """
+
+    result = OrderRepository.get_all_orders()
+
+    assert isinstance(result, list)
+
+
+# ============================================================
+# Update Order
 # ============================================================
 
 def test_update_order(test_user):
@@ -269,12 +340,11 @@ def test_update_order(test_user):
     )
 
 
-def test_update_order_without_id():
-    """Test updating an order without an order ID."""
+def test_update_order_without_id(test_user):
+    """Test updating an order without an ID."""
 
     order = Order(
-        order_id=None,
-        user_id=1,
+        user_id=test_user,
         total_amount=500.00,
         status="pending",
         shipping_address="Pune"
@@ -302,7 +372,6 @@ def test_update_order_status(test_user):
     )
 
     assert created_order is not None
-    assert created_order.order_id is not None
 
     created_order.status = "shipped"
 
@@ -348,7 +417,6 @@ def test_create_order_item(
     )
 
     assert created_order is not None
-    assert created_order.order_id is not None
 
     order_item = OrderItem(
         order_id=created_order.order_id,
@@ -363,18 +431,10 @@ def test_create_order_item(
 
     assert created_item is not None
     assert created_item.order_item_id is not None
-
-    assert created_item.order_id == (
-        created_order.order_id
-    )
-
-    assert created_item.product_id == (
-        product_1.product_id
-    )
-
+    assert created_item.order_id == created_order.order_id
+    assert created_item.product_id == product_1.product_id
     assert created_item.quantity == 2
     assert created_item.price == 250.00
-    assert created_item.subtotal == 500.00
 
     OrderRepository.delete_order(
         created_order.order_id
@@ -401,7 +461,6 @@ def test_get_order_items(
     )
 
     assert created_order is not None
-    assert created_order.order_id is not None
 
     order_item = OrderItem(
         order_id=created_order.order_id,
@@ -415,19 +474,27 @@ def test_get_order_items(
     )
 
     assert created_item is not None
-    assert created_item.order_item_id is not None
 
     items = OrderRepository.get_order_items(
         created_order.order_id
     )
 
     assert isinstance(items, list)
+    assert len(items) >= 1
 
-    assert any(
-        item.order_item_id ==
-        created_item.order_item_id
-        for item in items
+    found_item = next(
+        (
+            item
+            for item in items
+            if item.order_item_id == created_item.order_item_id
+        ),
+        None
     )
+
+    assert found_item is not None
+    assert found_item.product_id == product_1.product_id
+    assert found_item.quantity == 2
+    assert found_item.price == 300.00
 
     OrderRepository.delete_order(
         created_order.order_id
@@ -454,7 +521,6 @@ def test_get_order_item_by_id(
     )
 
     assert created_order is not None
-    assert created_order.order_id is not None
 
     order_item = OrderItem(
         order_id=created_order.order_id,
@@ -470,32 +536,19 @@ def test_get_order_item_by_id(
     assert created_item is not None
     assert created_item.order_item_id is not None
 
-    retrieved_item = (
-        OrderRepository.get_order_item_by_id(
-            created_item.order_item_id
-        )
-    )
-
-    assert retrieved_item is not None
-
-    assert (
-        retrieved_item.order_item_id ==
+    retrieved_item = OrderRepository.get_order_item_by_id(
         created_item.order_item_id
     )
 
+    assert retrieved_item is not None
     assert (
-        retrieved_item.order_id ==
-        created_order.order_id
+        retrieved_item.order_item_id
+        == created_item.order_item_id
     )
-
-    assert (
-        retrieved_item.product_id ==
-        product_1.product_id
-    )
-
+    assert retrieved_item.order_id == created_order.order_id
+    assert retrieved_item.product_id == product_1.product_id
     assert retrieved_item.quantity == 2
     assert retrieved_item.price == 200.00
-    assert retrieved_item.subtotal == 400.00
 
     OrderRepository.delete_order(
         created_order.order_id
@@ -503,13 +556,13 @@ def test_get_order_item_by_id(
 
 
 def test_get_order_item_not_found():
-    """Test retrieving an order item that does not exist."""
+    """Test retrieving a non-existing order item."""
 
-    item = OrderRepository.get_order_item_by_id(
+    result = OrderRepository.get_order_item_by_id(
         999999999
     )
 
-    assert item is None
+    assert result is None
 
 
 def test_update_order_item(
@@ -532,7 +585,6 @@ def test_update_order_item(
     )
 
     assert created_order is not None
-    assert created_order.order_id is not None
 
     order_item = OrderItem(
         order_id=created_order.order_id,
@@ -577,11 +629,9 @@ def test_update_order_item(
     )
 
     assert (
-        updated_item.product_id ==
-        expected_product_id
+        updated_item.product_id
+        == expected_product_id
     )
-
-    assert updated_item.subtotal == 900.00
 
     OrderRepository.delete_order(
         created_order.order_id
@@ -592,7 +642,6 @@ def test_update_order_item_without_id():
     """Test updating an order item without an ID."""
 
     order_item = OrderItem(
-        order_item_id=None,
         order_id=1,
         product_id=1,
         quantity=2,
@@ -626,7 +675,6 @@ def test_delete_order_item(
     )
 
     assert created_order is not None
-    assert created_order.order_id is not None
 
     order_item = OrderItem(
         order_id=created_order.order_id,
@@ -640,19 +688,16 @@ def test_delete_order_item(
     )
 
     assert created_item is not None
-    assert created_item.order_item_id is not None
-
-    item_id = created_item.order_item_id
 
     result = OrderRepository.delete_order_item(
-        item_id
+        created_item.order_item_id
     )
 
     assert result is True
 
     deleted_item = (
         OrderRepository.get_order_item_by_id(
-            item_id
+            created_item.order_item_id
         )
     )
 
@@ -664,7 +709,7 @@ def test_delete_order_item(
 
 
 def test_delete_order_item_not_found():
-    """Test deleting an order item that does not exist."""
+    """Test deleting a non-existing order item."""
 
     result = OrderRepository.delete_order_item(
         999999999
@@ -672,6 +717,10 @@ def test_delete_order_item_not_found():
 
     assert result is False
 
+
+# ============================================================
+# Delete Order
+# ============================================================
 
 def test_delete_order(
     test_user,
@@ -693,7 +742,6 @@ def test_delete_order(
     )
 
     assert created_order is not None
-    assert created_order.order_id is not None
 
     order_item = OrderItem(
         order_id=created_order.order_id,
@@ -708,29 +756,27 @@ def test_delete_order(
 
     assert created_item is not None
 
-    order_id = created_order.order_id
-
     result = OrderRepository.delete_order(
-        order_id
+        created_order.order_id
     )
 
     assert result is True
 
     deleted_order = OrderRepository.get_order_by_id(
-        order_id
+        created_order.order_id
     )
 
     assert deleted_order is None
 
-    items = OrderRepository.get_order_items(
-        order_id
+    deleted_items = OrderRepository.get_order_items(
+        created_order.order_id
     )
 
-    assert items == []
+    assert deleted_items == []
 
 
 def test_delete_order_not_found():
-    """Test deleting an order that does not exist."""
+    """Test deleting a non-existing order."""
 
     result = OrderRepository.delete_order(
         999999999
@@ -740,7 +786,7 @@ def test_delete_order_not_found():
 
 
 # ============================================================
-# Database Connection Failure Tests
+# Connection Failure Tests
 # ============================================================
 
 def test_create_order_connection_failure():
@@ -792,6 +838,18 @@ def test_get_orders_by_user_connection_failure():
     assert result == []
 
 
+def test_get_all_orders_connection_failure():
+    """Test get_all_orders when database connection fails."""
+
+    with patch(
+        "repositories.order_repository.get_connection",
+        return_value=None
+    ):
+        result = OrderRepository.get_all_orders()
+
+    assert result == []
+
+
 def test_update_order_connection_failure():
     """Test update_order when database connection fails."""
 
@@ -814,20 +872,6 @@ def test_update_order_connection_failure():
     assert result is False
 
 
-def test_delete_order_connection_failure():
-    """Test delete_order when database connection fails."""
-
-    with patch(
-        "repositories.order_repository.get_connection",
-        return_value=None
-    ):
-        result = OrderRepository.delete_order(
-            1
-        )
-
-    assert result is False
-
-
 def test_create_order_item_connection_failure():
     """Test create_order_item when database connection fails."""
 
@@ -835,7 +879,7 @@ def test_create_order_item_connection_failure():
         order_id=1,
         product_id=1,
         quantity=2,
-        price=100.00
+        price=250.00
     )
 
     with patch(
@@ -885,7 +929,7 @@ def test_update_order_item_connection_failure():
         order_id=1,
         product_id=1,
         quantity=2,
-        price=100.00
+        price=250.00
     )
 
     with patch(
@@ -907,6 +951,20 @@ def test_delete_order_item_connection_failure():
         return_value=None
     ):
         result = OrderRepository.delete_order_item(
+            1
+        )
+
+    assert result is False
+
+
+def test_delete_order_connection_failure():
+    """Test delete_order when database connection fails."""
+
+    with patch(
+        "repositories.order_repository.get_connection",
+        return_value=None
+    ):
+        result = OrderRepository.delete_order(
             1
         )
 

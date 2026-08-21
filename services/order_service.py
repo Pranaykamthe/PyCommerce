@@ -147,7 +147,6 @@ class OrderService:
         )
 
         if not items:
-
             raise ValueError(
                 "Order must contain at least one item."
             )
@@ -169,10 +168,7 @@ class OrderService:
         )
 
         if created_order is None:
-
             return None
-
-        created_items = []
 
         try:
 
@@ -193,10 +189,6 @@ class OrderService:
                     raise RuntimeError(
                         "Failed to create order item."
                     )
-
-                created_items.append(
-                    created_item
-                )
 
         except Exception:
 
@@ -223,7 +215,6 @@ class OrderService:
         """Get an order by ID."""
 
         if order_id <= 0:
-
             raise ValueError(
                 "Order ID must be greater than zero."
             )
@@ -259,7 +250,6 @@ class OrderService:
         """Get all items belonging to an order."""
 
         if order_id <= 0:
-
             raise ValueError(
                 "Order ID must be greater than zero."
             )
@@ -279,7 +269,6 @@ class OrderService:
         """Validate and update an order."""
 
         if order.order_id is None:
-
             raise ValueError(
                 "Order ID is required."
             )
@@ -297,7 +286,6 @@ class OrderService:
         )
 
         if order.total_amount < 0:
-
             raise ValueError(
                 "Order total cannot be negative."
             )
@@ -324,7 +312,6 @@ class OrderService:
         """
 
         if order_id <= 0:
-
             raise ValueError(
                 "Order ID must be greater than zero."
             )
@@ -338,7 +325,6 @@ class OrderService:
         )
 
         if order is None:
-
             return False
 
         order.status = status
@@ -361,7 +347,6 @@ class OrderService:
             item.order_id is None
             or item.order_id <= 0
         ):
-
             raise ValueError(
                 "Valid order ID is required."
             )
@@ -370,7 +355,6 @@ class OrderService:
             item.product_id is None
             or item.product_id <= 0
         ):
-
             raise ValueError(
                 "Valid product ID is required."
             )
@@ -394,7 +378,6 @@ class OrderService:
         """Validate and update an order item."""
 
         if item.order_item_id is None:
-
             raise ValueError(
                 "Order item ID is required."
             )
@@ -403,7 +386,6 @@ class OrderService:
             item.product_id is None
             or item.product_id <= 0
         ):
-
             raise ValueError(
                 "Valid product ID is required."
             )
@@ -427,7 +409,6 @@ class OrderService:
         """Delete an order item."""
 
         if order_item_id <= 0:
-
             raise ValueError(
                 "Order item ID must be greater than zero."
             )
@@ -447,7 +428,6 @@ class OrderService:
         """Delete an order and its items."""
 
         if order_id <= 0:
-
             raise ValueError(
                 "Order ID must be greater than zero."
             )
@@ -455,3 +435,5 @@ class OrderService:
         return OrderRepository.delete_order(
             order_id
         )
+        
+    

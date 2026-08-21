@@ -60,6 +60,10 @@ class OrderRepository:
             cursor.close()
             close_connection(connection)
 
+    # ========================================================
+    # Get Order By ID
+    # ========================================================
+
     @staticmethod
     def get_order_by_id(
         order_id: int
@@ -110,6 +114,64 @@ class OrderRepository:
         finally:
             cursor.close()
             close_connection(connection)
+
+    # ========================================================
+    # Get All Orders
+    # ========================================================
+
+    @staticmethod
+    def get_all_orders() -> list[Order]:
+        """Get all orders."""
+
+        connection = get_connection()
+
+        if connection is None:
+            return []
+
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            query = """
+                SELECT
+                    order_id,
+                    user_id,
+                    total_amount,
+                    order_status,
+                    shipping_address,
+                    order_date,
+                    updated_at
+                FROM orders
+                ORDER BY order_id DESC
+            """
+
+            cursor.execute(query)
+
+            rows = cursor.fetchall()
+
+            orders = []
+
+            for row in rows:
+                order = Order(
+                    order_id=row["order_id"],
+                    user_id=row["user_id"],
+                    total_amount=float(row["total_amount"]),
+                    status=row["order_status"],
+                    shipping_address=row["shipping_address"],
+                    created_at=str(row["order_date"]),
+                    updated_at=str(row["updated_at"])
+                )
+
+                orders.append(order)
+
+            return orders
+
+        finally:
+            cursor.close()
+            close_connection(connection)
+
+    # ========================================================
+    # Get Orders By User
+    # ========================================================
 
     @staticmethod
     def get_orders_by_user(
@@ -167,6 +229,10 @@ class OrderRepository:
             cursor.close()
             close_connection(connection)
 
+    # ========================================================
+    # Update Order
+    # ========================================================
+
     @staticmethod
     def update_order(
         order: Order
@@ -208,6 +274,10 @@ class OrderRepository:
         finally:
             cursor.close()
             close_connection(connection)
+
+    # ========================================================
+    # Delete Order
+    # ========================================================
 
     @staticmethod
     def delete_order(
@@ -315,6 +385,10 @@ class OrderRepository:
             cursor.close()
             close_connection(connection)
 
+    # ========================================================
+    # Get Order Item By ID
+    # ========================================================
+
     @staticmethod
     def get_order_item_by_id(
         order_item_id: int
@@ -363,6 +437,10 @@ class OrderRepository:
         finally:
             cursor.close()
             close_connection(connection)
+
+    # ========================================================
+    # Get Order Items
+    # ========================================================
 
     @staticmethod
     def get_order_items(
@@ -418,6 +496,10 @@ class OrderRepository:
             cursor.close()
             close_connection(connection)
 
+    # ========================================================
+    # Update Order Item
+    # ========================================================
+
     @staticmethod
     def update_order_item(
         order_item: OrderItem
@@ -469,6 +551,10 @@ class OrderRepository:
         finally:
             cursor.close()
             close_connection(connection)
+
+    # ========================================================
+    # Delete Order Item
+    # ========================================================
 
     @staticmethod
     def delete_order_item(
